@@ -26,7 +26,10 @@
 #include "config.h"
 #include "PlatformDisplay.h"
 
+#if USE(EGL) || USE(GLX)
 #include "GLContext.h"
+#endif
+
 #include <cstdlib>
 #include <mutex>
 

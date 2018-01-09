@@ -34,12 +34,18 @@ set(MiniBrowser_SYSTEM_INCLUDE_DIRECTORIES
     ${LIBSOUP_INCLUDE_DIRS}
 )
 
+# OS X
+find_library(OSX_COREFOUNDATION CoreFoundation)
+find_library(OSX_ICONV iconv)
+
 set(MiniBrowser_LIBRARIES
     ${JavaScriptCore_LIBRARY_NAME}
     WebKit2
     ${GTK3_LIBRARIES}
     ${GLIB_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
+    ${OSX_COREFOUNDATION}
+    ${OSX_ICONV}
 )
 
 add_custom_command(

@@ -26,9 +26,9 @@
 #ifndef ResourceError_h
 #define ResourceError_h
 
-#include "ResourceErrorBase.h"
-
 #if USE(SOUP)
+
+#include "ResourceErrorBase.h"
 
 #include <wtf/glib/GRefPtr.h>
 

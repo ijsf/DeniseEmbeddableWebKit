@@ -26,7 +26,9 @@
 #include "config.h"
 #include "PlatformDisplayX11.h"
 
+#if USE(EGL) || USE(GLX)
 #include "GLContext.h"
+#endif
 
 #if PLATFORM(X11)
 #include <X11/Xlib.h>

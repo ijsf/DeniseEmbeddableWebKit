@@ -1079,6 +1079,7 @@ list(APPEND PluginProcess_SOURCES
 
 # Commands for building the built-in injected bundle.
 include_directories(
+    "${WebKit2CommonIncludeDirectories}"
     "${WEBKIT2_DIR}/Platform"
     "${WEBKIT2_DIR}/Shared"
     "${WEBKIT2_DIR}/Shared/API/c"
@@ -1093,6 +1094,14 @@ include_directories(
 add_library(webkit2gtkinjectedbundle MODULE "${WEBKIT2_DIR}/WebProcess/InjectedBundle/API/glib/WebKitInjectedBundleMain.cpp")
 add_webkit2_prefix_header(webkit2gtkinjectedbundle)
 target_link_libraries(webkit2gtkinjectedbundle WebKit2)
+target_include_directories(webkit2gtkinjectedbundle PRIVATE
+    "${WEBCORE_DIR}/platform/network/soup"
+    "${WEBCORE_DIR}/platform/network"
+    "${WEBCORE_DIR}/platform"
+    "${FORWARDING_HEADERS_DIR}/WebCore"
+    "${FORWARDING_HEADERS_DIR}/WebKit"
+    "${DERIVED_SOURCES_DIR}/WebCore"
+)
 
 if (COMPILER_IS_GCC_OR_CLANG)
     WEBKIT_ADD_TARGET_CXX_FLAGS(webkit2gtkinjectedbundle -Wno-unused-parameter)
