@@ -148,6 +148,17 @@ void WorkerThread::workerThread()
 #endif
 
 #if USE(GLIB)
+    // Save ancestor main context before pushing a new main context
+#if 0
+    // ACHTUNG
+    g_message("WorkerThread::workerThread ctx %llu saved to tls", (unsigned long long)g_main_context_get_thread_default());
+    RunLoop::setAncestorMainContext(g_main_context_get_thread_default());
+#else
+    RunLoop::AncestorMainContext ancestorMainContext = RunLoop::getAncestorMainContext();
+    g_message("WorkerThread::workerThread ctx %llu saved to tls", (unsigned long long)ancestorMainContext);
+    RunLoop::setAncestorMainContext(ancestorMainContext);
+#endif
+
     GRefPtr<GMainContext> mainContext = adoptGRef(g_main_context_new());
     g_main_context_push_thread_default(mainContext.get());
 #endif

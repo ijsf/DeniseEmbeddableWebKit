@@ -40,6 +40,9 @@
 
 namespace WebCore {
 
+// ACHTUNG nasty hack, should do proper IsRealMainThread sort of check
+static volatile bool sharedTimerIsSet = false;
+
 // Fire timers for this length of time, and then quit to let the run loop process user input events.
 // 100ms is about a perceptable delay in UI, so use a half of that as a threshold.
 // This is to prevent UI freeze when there are too many timers or machine performance is low.
@@ -50,8 +53,11 @@ static const Seconds maxDurationOfFiringTimers { 50_ms };
 
 ThreadTimers::ThreadTimers()
 {
-    if (isUIThread())
+    if (isUIThread() && !sharedTimerIsSet) {
+        // ACHTUNG make sure this is ever only called once on the real (first) main thread
+        sharedTimerIsSet = true;
         setSharedTimer(&MainThreadSharedTimer::singleton());
+    }
 }
 
 // A worker thread may initialize SharedTimer after some timers are created.

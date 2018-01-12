@@ -34,7 +34,7 @@ namespace WebCore {
 BlobRegistry& blobRegistry()
 {
     ASSERT(isMainThread());
-    return *platformStrategies()->blobRegistry();
+    return *platformStrategies(PLATFORM_NETWORK)->blobRegistry();
 }
 
 BlobRegistry::~BlobRegistry()

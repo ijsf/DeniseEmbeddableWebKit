@@ -37,6 +37,8 @@
 #include <wtf/Seconds.h>
 #include <wtf/ThreadingPrimitives.h>
 
+#include <glib.h>
+
 #if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/GRefPtr.h>
 #endif
@@ -56,6 +58,12 @@ public:
     ~RunLoop();
 
     void dispatch(Function<void()>&&) override;
+
+    // Opaque data type for ancestor main contexts
+    typedef struct AncestorMainContext_* AncestorMainContext;
+
+    WTF_EXPORT_PRIVATE static void setAncestorMainContext(AncestorMainContext context);
+    WTF_EXPORT_PRIVATE static AncestorMainContext getAncestorMainContext();
 
     WTF_EXPORT_PRIVATE static void run();
     WTF_EXPORT_PRIVATE void stop();

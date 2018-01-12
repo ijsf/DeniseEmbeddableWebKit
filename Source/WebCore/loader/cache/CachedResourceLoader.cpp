@@ -1220,7 +1220,7 @@ void CachedResourceLoader::garbageCollectDocumentResources()
 
 void CachedResourceLoader::performPostLoadActions()
 {
-    platformStrategies()->loaderStrategy()->servePendingRequests();
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->servePendingRequests();
 }
 
 void CachedResourceLoader::incrementRequestCount(const CachedResource& resource)

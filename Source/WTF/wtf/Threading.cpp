@@ -43,14 +43,18 @@
 #include <bmalloc/bmalloc.h>
 #endif
 
+#include <glib.h>
+#include <wtf/RunLoop.h>
+
 namespace WTF {
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
-    NewThreadContext(const char* name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
+    NewThreadContext(const char* name, Function<void()>&& entryPoint, Ref<Thread>&& thread, RunLoop::AncestorMainContext ancestorMainContext)
         : name(name)
         , entryPoint(WTFMove(entryPoint))
         , thread(WTFMove(thread))
+        , ancestorMainContext(ancestorMainContext) 
     {
     }
 
@@ -60,6 +64,7 @@ public:
     Mutex mutex;
     enum class Stage { Start, EstablishedHandle, Initialized };
     Stage stage { Stage::Start };
+    RunLoop::AncestorMainContext ancestorMainContext;
 
 #if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
     ThreadCondition condition;
@@ -112,6 +117,10 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
         MutexLocker locker(context->mutex);
         ASSERT(context->stage == NewThreadContext::Stage::EstablishedHandle);
 
+        // Set the ancestor main context so this thread will know what its ancestor main context is
+        RunLoop::setAncestorMainContext(context->ancestorMainContext);
+        g_message("[thread %u] Thread::entryPoint ctx 0x%llx saved to tls", currentThread(), (unsigned long long)context->ancestorMainContext);
+
         Thread::initializeCurrentThreadInternal(context->name);
         function = WTFMove(context->entryPoint);
         context->thread->initializeInThread();
@@ -131,9 +140,23 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
 
 RefPtr<Thread> Thread::create(const char* name, Function<void()>&& entryPoint)
 {
+#if 0
+    // Retrieve the main context of this thread's ancestor to find out to which main thread it belongs
+    GMainContext *ancestorMainContext = RunLoop::getTlsAncestorMainContext();
+    if (ancestorMainContext) {
+        // Ancestor main context is stored in TLS, which means this thread is a child of main
+    }
+    else {
+        // No ancestor main thread, which means this thread is a main thread
+        ancestorMainContext = g_main_context_get_thread_default();
+    }
+#endif
+    RunLoop::AncestorMainContext ancestorMainContext = RunLoop::getAncestorMainContext();
+    g_message("[thread %u] Thread::create with ancestor main ctx 0x%llx", currentThread(), (unsigned long long)ancestorMainContext);
+    
     WTF::initializeThreading();
     Ref<Thread> thread = adoptRef(*new Thread());
-    Ref<NewThreadContext> context = adoptRef(*new NewThreadContext { name, WTFMove(entryPoint), thread.copyRef() });
+    Ref<NewThreadContext> context = adoptRef(*new NewThreadContext { name, WTFMove(entryPoint), thread.copyRef(), ancestorMainContext });
     // Increment the context ref on behalf of the created thread. We do not just use a unique_ptr and leak it to the created thread because both the creator and created thread has a need to keep the context alive:
     // 1. the created thread needs to keep it alive because Thread::create() can exit before the created thread has a chance to use the context.
     // 2. the creator thread (if HAVE(STACK_BOUNDS_FOR_NEW_THREAD) is false) needs to keep it alive because the created thread may exit before the creator has a chance to wake up from waiting for the completion of the created thread's initialization. This waiting uses a condition variable in the context.

@@ -194,7 +194,7 @@ void PingLoader::startPingLoad(Frame& frame, ResourceRequest& request, SecurityO
 
     InspectorInstrumentation::continueAfterPingLoader(frame, identifier, frame.loader().activeDocumentLoader(), request, ResourceResponse());
 
-    platformStrategies()->loaderStrategy()->createPingHandle(frame.loader().networkingContext(), request, sourceOrigin, options);
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->createPingHandle(frame.loader().networkingContext(), request, sourceOrigin, options);
 }
 
 }

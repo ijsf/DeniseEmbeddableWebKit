@@ -29,6 +29,7 @@
 
 #include <glib.h>
 #include <wtf/MainThread.h>
+#include <wtf/Threading.h>
 #include <wtf/glib/RunLoopSourcePriority.h>
 
 namespace WTF {
@@ -49,11 +50,57 @@ static GSourceFuncs runLoopSourceFunctions = {
     nullptr, // closure_marshall
 };
 
+// Since TLS is initialized to 0, and the AncestorMainContext of the first "global" main thread is also 0,
+// we need to distinguish between the two: the (context == NULL) case is detected,
+// and set to all-ones (GLOBAL_CONTEXT) instead.
+#define GLOBAL_CONTEXT ((RunLoop::AncestorMainContext)~0)
+
+static GPrivate tlsAncestorMainContextKey;
+
+// Sets the ancestor main context for this thread using TLS
+void RunLoop::setAncestorMainContext(AncestorMainContext ctx)
+{
+    if (ctx == NULL) {
+        // AncestorMainContext == NULL, use GLOBAL_CONTEXT instead
+        g_private_set(&tlsAncestorMainContextKey, (gpointer)GLOBAL_CONTEXT);
+    }
+    else {
+        g_private_set(&tlsAncestorMainContextKey, (gpointer)ctx);
+    }
+}
+
+RunLoop::AncestorMainContext getTlsAncestorMainContext()
+{
+    return (RunLoop::AncestorMainContext)g_private_get(&tlsAncestorMainContextKey);
+}
+
+RunLoop::AncestorMainContext RunLoop::getAncestorMainContext()
+{
+    AncestorMainContext ancestorMainContext = getTlsAncestorMainContext();
+    if (ancestorMainContext) {
+        // Ancestor main context is stored in TLS, which means this thread is a child of a main thread
+    }
+    else {
+        // No ancestor main context, which means this thread itself is a main thread
+        ancestorMainContext = (AncestorMainContext)g_main_context_get_thread_default();
+        if(ancestorMainContext == NULL) {
+            // Global context, store as GLOBAL_CONTEXT
+            ancestorMainContext = GLOBAL_CONTEXT;
+        }
+    }
+    return ancestorMainContext;
+}
+
 RunLoop::RunLoop()
 {
     m_mainContext = g_main_context_get_thread_default();
-    if (!m_mainContext)
+    if (!m_mainContext) {
         m_mainContext = isMainThread() ? g_main_context_default() : adoptGRef(g_main_context_new());
+        g_message("[thread %u] RunLoop::RunLoop global thread 0x%llx", currentThread(), (unsigned long long)m_mainContext.get());
+    }
+    else {
+        g_message("[thread %u] RunLoop::RunLoop emulated process thread 0x%llx", currentThread(), (unsigned long long)m_mainContext.get());
+    }
     ASSERT(m_mainContext);
 
     GRefPtr<GMainLoop> innermostLoop = adoptGRef(g_main_loop_new(m_mainContext.get(), FALSE));
@@ -73,6 +120,8 @@ RunLoop::RunLoop()
 
 RunLoop::~RunLoop()
 {
+    g_message("RunLoop::~RunLoop");
+
     g_source_destroy(m_source.get());
 
     for (int i = m_mainLoops.size() - 1; i >= 0; --i) {
@@ -89,6 +138,15 @@ void RunLoop::run()
 
     // The innermost main loop should always be there.
     ASSERT(!runLoop.m_mainLoops.isEmpty());
+
+    // In any case, a new main context is going to be pushed,
+    // so make sure we store the ancestor main context to TLS,
+    // so this thread can remember who its ancestor main thread is.
+    {
+        AncestorMainContext ancestorMainContext = RunLoop::getAncestorMainContext();
+        RunLoop::setAncestorMainContext(ancestorMainContext);
+        g_message("[thread %u] RunLoop::run ctx 0x%llx saved to tls", currentThread(), (unsigned long long)ancestorMainContext);
+    }
 
     GMainLoop* innermostLoop = runLoop.m_mainLoops[0].get();
     if (!g_main_loop_is_running(innermostLoop)) {

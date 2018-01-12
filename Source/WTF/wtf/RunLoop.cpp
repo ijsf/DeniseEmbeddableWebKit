@@ -30,9 +30,13 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSpecific.h>
 
+#include <wtf/Threading.h>
+#include <map>
+#include <glib.h>
+
 namespace WTF {
 
-static RunLoop* s_mainRunLoop;
+std::map<RunLoop::AncestorMainContext, RunLoop*> s_mainRunLoopMap;
 
 // Helper class for ThreadSpecificData.
 class RunLoop::Holder {
@@ -50,10 +54,22 @@ private:
 
 void RunLoop::initializeMainRunLoop()
 {
-    if (s_mainRunLoop)
+    // Get ancestor main context for this thread
+    AncestorMainContext ancestorMainContext = RunLoop::getAncestorMainContext();
+
+    // Find it in the run loop map
+    if (s_mainRunLoopMap.find(ancestorMainContext) != s_mainRunLoopMap.end()) {
+        // Already exists
         return;
+    }
+
+    // Could not be found so it must be new
+    g_message("[thread %u] RunLoop::initializeMainRunLoop() new main run loop with ctx 0x%llx", currentThread(), (unsigned long long)ancestorMainContext);
+    
     initializeMainThread();
-    s_mainRunLoop = &RunLoop::current();
+    
+    // Store in run loop map
+    s_mainRunLoopMap[ancestorMainContext] = &RunLoop::current();
 }
 
 RunLoop& RunLoop::current()
@@ -64,14 +80,28 @@ RunLoop& RunLoop::current()
 
 RunLoop& RunLoop::main()
 {
-    ASSERT(s_mainRunLoop);
-    return *s_mainRunLoop;
+    // Get ancestor main context for this thread
+    AncestorMainContext mainContext = getAncestorMainContext();
+
+    // Find it in the run loop map
+    if(s_mainRunLoopMap.find(mainContext) == s_mainRunLoopMap.end()) {
+        // Should never happen -- this means a thread exists that cannot properly retrieve its ancestor main context,
+        // e.g. the "ancestor" main thread it belongs to!
+        //
+        // If this happens this indicates that something in the implementation is faulty.
+        g_error("[thread %u] RunLoop ctx 0x%llx not found", currentThread(), (unsigned long long)mainContext);
+    }
+    // Return the relevant run loop of the ancestor main thread
+    return *s_mainRunLoopMap[mainContext];
 }
 
 bool RunLoop::isMain()
 {
-    ASSERT(s_mainRunLoop);
-    return s_mainRunLoop == &RunLoop::current();
+    // Get ancestor main context for this thread
+    AncestorMainContext mainContext = getAncestorMainContext();
+
+    ASSERT(s_mainRunLoopMap[mainContext]);
+    return s_mainRunLoopMap[mainContext] == &RunLoop::current();
 }
 
 void RunLoop::performWork()

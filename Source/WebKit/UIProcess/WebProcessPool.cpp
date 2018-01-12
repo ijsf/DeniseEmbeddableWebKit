@@ -392,10 +392,13 @@ void WebProcessPool::languageChanged(void* context)
 
 void WebProcessPool::languageChanged()
 {
+    // ACHTUNG triggers endless observer->send loop
+#if 0
     sendToAllProcesses(Messages::WebProcess::UserPreferredLanguagesChanged(userPreferredLanguages()));
 #if USE(SOUP)
     if (m_networkProcess)
         m_networkProcess->send(Messages::NetworkProcess::UserPreferredLanguagesChanged(userPreferredLanguages()), 0);
+#endif
 #endif
 }
 

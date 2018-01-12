@@ -34,30 +34,31 @@
 namespace WebCore {
 
 #if !ASSERT_MSG_DISABLED
-static bool presentingApplicationPIDOverrideWasQueried;
+//static bool presentingApplicationPIDOverrideWasQueried;
 #endif
 
 static std::optional<int>& presentingApplicationPIDOverride()
 {
     static NeverDestroyed<std::optional<int>> pid;
 #if !ASSERT_MSG_DISABLED
-    presentingApplicationPIDOverrideWasQueried = true;
+    //presentingApplicationPIDOverrideWasQueried = true;
 #endif
     return pid;
 }
 
 int presentingApplicationPID()
 {
-    const auto& pid = presentingApplicationPIDOverride();
-    ASSERT(!pid || RunLoop::isMain());
-    return pid ? pid.value() : getCurrentProcessID();
+    //const auto& pid = presentingApplicationPIDOverride();
+    //ASSERT(!pid || RunLoop::isMain());
+    //return pid ? pid.value() : getCurrentProcessID();
+  return getCurrentProcessID();
 }
 
 void setPresentingApplicationPID(int pid)
 {
-    ASSERT(RunLoop::isMain());
-    ASSERT_WITH_MESSAGE(!presentingApplicationPIDOverrideWasQueried, "presentingApplicationPID() should not be called before setPresentingApplicationPID()");
-    presentingApplicationPIDOverride() = pid;
+    //ASSERT(RunLoop::isMain());
+    //ASSERT_WITH_MESSAGE(!presentingApplicationPIDOverrideWasQueried, "presentingApplicationPID() should not be called before setPresentingApplicationPID()");
+    //presentingApplicationPIDOverride() = pid;
 }
 
 } // namespace WebCore

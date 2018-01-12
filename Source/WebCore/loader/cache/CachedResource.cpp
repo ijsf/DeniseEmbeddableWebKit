@@ -263,11 +263,11 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
     // FIXME: We should not special-case Beacon here.
     if (m_options.keepAlive && type() == CachedResource::Beacon) {
         ASSERT(m_origin);
-        platformStrategies()->loaderStrategy()->createPingHandle(frame.loader().networkingContext(), request, *m_origin, m_options);
+        platformStrategies(PLATFORM_WEB)->loaderStrategy()->createPingHandle(frame.loader().networkingContext(), request, *m_origin, m_options);
         return;
     }
 
-    m_loader = platformStrategies()->loaderStrategy()->loadResource(frame, *this, request, m_options);
+    m_loader = platformStrategies(PLATFORM_WEB)->loaderStrategy()->loadResource(frame, *this, request, m_options);
     if (!m_loader) {
         RELEASE_LOG_IF_ALLOWED("load: Unable to create SubresourceLoader (frame = %p)", &frame);
         failBeforeStarting();

@@ -36,7 +36,7 @@ namespace WebKit {
 void NetworkProcessPlatformStrategies::initialize()
 {
     static NeverDestroyed<NetworkProcessPlatformStrategies> platformStrategies;
-    setPlatformStrategies(&platformStrategies.get());
+    setPlatformStrategies(PLATFORM_NETWORK, &platformStrategies.get());
 }
 
 CookiesStrategy* NetworkProcessPlatformStrategies::createCookiesStrategy()

@@ -44,108 +44,145 @@
 #include <wpe/renderer-host.h>
 #endif
 
+#include "StorageProcess.h"
+#include "NetworkProcess.h"
+#include "WebProcess.h"
+#include "ChildProcessMain.h"
+#include <WebCore/SoupNetworkSession.h>
+#include <gtk/gtk.h>
+#include <libintl.h>
+#include <libsoup/soup.h>
+#include <wtf/CurrentTime.h>
+
+#include "LogInitialization.h"
+#include <WebCore/LogInitialization.h>
+#include <runtime/InitializeThreading.h>
+#include <wtf/MainThread.h>
+#include <wtf/RunLoop.h>
+
 using namespace WebCore;
 
 namespace WebKit {
 
-static void childSetupFunction(gpointer userData)
+struct EmulateProcessData {
+    // Process type (e.g. web, network, storage)
+    ProcessLauncher::ProcessType type;
+
+    // Initialization parameters (e.g. socket data)
+    ChildProcessInitializationParameters params;
+};
+
+//
+// This function represents the main() function of what would normally be a process.
+// It is expected to launch in its own thread.
+//
+// It does this by taking care of the following:
+//
+// * New glib main context for this thread
+// * Emulate ChildProcessMain functionality that would normally occur in new process
+//
+// Remarks (TODO):
+//
+// * g_main_context_default should be replaced with g_main_context_get_thread_default everywhere except in RunLoop::RunLoop
+//
+static gpointer EmulateProcessMain(gpointer data)
 {
-    int socket = GPOINTER_TO_INT(userData);
-    close(socket);
+    // Retrieve EmulateProcess and wrap in unique_ptr, will auto cleanup when out-of-scope
+    std::unique_ptr<EmulateProcessData> processData((EmulateProcessData *)data);
+
+    // Add this thread as main thread
+    WTF::addAsMainThread();
+
+    // Create a new top main context for this "main thread" of the emulated process
+    GMainContext *mainContext = g_main_context_new();
+    g_main_context_push_thread_default(mainContext);
+
+    // Emulate platformInitialize functionality
+    if (processData->type == ProcessLauncher::ProcessType::Web) {
+        g_message("ProcessLauncher::ProcessType::Web");
+
+        // Based on WebProcessMain::platformInitialize
+        {
+#if (USE(COORDINATED_GRAPHICS_THREADED) || USE(GSTREAMER_GL)) && PLATFORM(X11)
+            XInitThreads();
+#endif
+            // ACHTUNG already handled in main app?
+            //gtk_init(nullptr, nullptr);
+
+            bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+            bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+        }
+    }
+    else if (processData->type == ProcessLauncher::ProcessType::Network) {
+        g_message("ProcessLauncher::ProcessType::Network");
+    }
+    else if (processData->type == ProcessLauncher::ProcessType::Storage) {
+        g_message("ProcessLauncher::ProcessType::Storage");
+    }
+    else {
+        g_error("Unsupported process %u", processData->type);
+    }
+
+    // Emulate InitializeWebKit2 functionality
+    {
+        JSC::initializeThreading();
+        RunLoop::initializeMainRunLoop();
+#if !LOG_DISABLED || !RELEASE_LOG_DISABLED
+        WebCore::initializeLogChannelsIfNecessary();
+        WebKit::initializeLogChannelsIfNecessary();
+#endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
+    }
+
+    // Emulate initialize() functionality
+    if (processData->type == ProcessLauncher::ProcessType::Web) {
+        WebProcess::singleton().initialize(processData->params);
+    }
+    else if (processData->type == ProcessLauncher::ProcessType::Network) {
+        NetworkProcess::singleton().initialize(processData->params);
+    }
+    else if (processData->type == ProcessLauncher::ProcessType::Storage) {
+        StorageProcess::singleton().initialize(processData->params);
+    }
+
+    // Start RunLoop for this emulated process
+    RunLoop::run();
+    
+    // Clean up
+    g_main_context_pop_thread_default(mainContext);
+    return NULL;
+}
+
+//
+// This function emulates what would normally be a separate process, by using threads only.
+// It spawns a new thread instead of a new process and uses EmulateProcessMain as main() analog function.
+//
+static void EmulateProcess(EmulateProcessData *processData)
+{
+    g_thread_new("", EmulateProcessMain, (gpointer)processData);
 }
 
 void ProcessLauncher::launchProcess()
 {
-    GPid pid = 0;
-
     IPC::Connection::SocketPair socketPair = IPC::Connection::createPlatformConnection(IPC::Connection::ConnectionOptions::SetCloexecOnServer);
 
-    String executablePath;
-    CString realExecutablePath;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    String pluginPath;
-    CString realPluginPath;
-#endif
-    switch (m_launchOptions.processType) {
-    case ProcessLauncher::ProcessType::Web:
-        executablePath = executablePathOfWebProcess();
-        break;
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    case ProcessLauncher::ProcessType::Plugin64:
-    case ProcessLauncher::ProcessType::Plugin32:
-        executablePath = executablePathOfPluginProcess();
-#if ENABLE(PLUGIN_PROCESS_GTK2)
-        if (m_launchOptions.extraInitializationData.contains("requires-gtk2"))
-            executablePath.append('2');
-#endif
-        pluginPath = m_launchOptions.extraInitializationData.get("plugin-path");
-        realPluginPath = fileSystemRepresentation(pluginPath);
-        break;
-#endif
-    case ProcessLauncher::ProcessType::Network:
-        executablePath = executablePathOfNetworkProcess();
-        break;
-    case ProcessLauncher::ProcessType::Storage:
-        executablePath = executablePathOfStorageProcess();
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        return;
-    }
-
-    realExecutablePath = fileSystemRepresentation(executablePath);
     GUniquePtr<gchar> webkitSocket(g_strdup_printf("%d", socketPair.client));
-    unsigned nargs = 4; // size of the argv array for g_spawn_async()
 
-#if PLATFORM(WPE)
-    GUniquePtr<gchar> wpeSocket;
-    if (m_launchOptions.processType == ProcessLauncher::ProcessType::Web) {
-        wpeSocket = GUniquePtr<gchar>(g_strdup_printf("%d", wpe_renderer_host_create_client()));
-        nargs++;
-    }
-#endif
+    // Emulate this process
+    EmulateProcessData *data = new EmulateProcessData();
+    data->params.connectionIdentifier = atoi(webkitSocket.get());
+    data->type = m_launchOptions.processType;
+    EmulateProcess(data);
 
-#if ENABLE(DEVELOPER_MODE)
-    Vector<CString> prefixArgs;
-    if (!m_launchOptions.processCmdPrefix.isNull()) {
-        Vector<String> splitArgs;
-        m_launchOptions.processCmdPrefix.split(' ', splitArgs);
-        for (auto& arg : splitArgs)
-            prefixArgs.append(arg.utf8());
-        nargs += prefixArgs.size();
-    }
-#endif
-
-    char** argv = g_newa(char*, nargs);
-    unsigned i = 0;
-#if ENABLE(DEVELOPER_MODE)
-    // If there's a prefix command, put it before the rest of the args.
-    for (auto& arg : prefixArgs)
-        argv[i++] = const_cast<char*>(arg.data());
-#endif
-    argv[i++] = const_cast<char*>(realExecutablePath.data());
-    argv[i++] = webkitSocket.get();
-#if PLATFORM(WPE)
-    if (m_launchOptions.processType == ProcessLauncher::ProcessType::Web)
-        argv[i++] = wpeSocket.get();
-#endif
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    argv[i++] = const_cast<char*>(realPluginPath.data());
-#else
-    argv[i++] = nullptr;
-#endif
-    argv[i++] = nullptr;
-
-    GUniqueOutPtr<GError> error;
-    if (!g_spawn_async(nullptr, argv, nullptr, G_SPAWN_LEAVE_DESCRIPTORS_OPEN, childSetupFunction, GINT_TO_POINTER(socketPair.server), &pid, &error.outPtr()))
-        g_error("Unable to fork a new child process: %s", error->message);
-
+#if 0
     // Don't expose the parent socket to potential future children.
     if (!setCloseOnExec(socketPair.client))
         RELEASE_ASSERT_NOT_REACHED();
 
     close(socketPair.client);
-    m_processIdentifier = pid;
+#endif
+
+    // ACHTUNG hack
+    m_processIdentifier = getpid();
 
     // We've finished launching the process, message back to the main run loop.
     RunLoop::main().dispatch([protectedThis = makeRef(*this), this, serverSocket = socketPair.server] {
@@ -155,16 +192,6 @@ void ProcessLauncher::launchProcess()
 
 void ProcessLauncher::terminateProcess()
 {
-    if (m_isLaunching) {
-        invalidate();
-        return;
-    }
-
-    if (!m_processIdentifier)
-        return;
-
-    kill(m_processIdentifier, SIGKILL);
-    m_processIdentifier = 0;
 }
 
 void ProcessLauncher::platformInvalidate()

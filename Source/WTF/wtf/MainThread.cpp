@@ -39,11 +39,15 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSpecific.h>
 
+#include <set>
+#include <glib.h>
+
 namespace WTF {
 
 static bool callbacksPaused; // This global variable is only accessed from main thread.
 #if !PLATFORM(COCOA)
-static ThreadIdentifier mainThreadIdentifier;
+//static ThreadIdentifier mainThreadIdentifier;
+static std::set<ThreadIdentifier> mainThreadIdentifiers;
 #endif
 
 static StaticLock mainThreadFunctionQueueMutex;
@@ -59,9 +63,11 @@ static std::once_flag initializeKey;
 void initializeMainThread()
 {
     std::call_once(initializeKey, [] {
+        g_message("[thread %u] initializeMainThread()", currentThread());
         initializeThreading();
 #if !PLATFORM(COCOA)
-        mainThreadIdentifier = currentThread();
+        //mainThreadIdentifier = currentThread();
+        addAsMainThread();
 #endif
         initializeMainThreadPlatform();
         initializeGCThreads();
@@ -69,9 +75,19 @@ void initializeMainThread()
 }
 
 #if !PLATFORM(COCOA)
+//
+// MainThread has been modified to accommodate the concept of multiple "main threads".
+// Each of these would normally run in its own process, where it would be the single main thread.
+//
+void addAsMainThread()
+{
+    g_message("[thread %u] addAsMainThread", currentThread());
+    mainThreadIdentifiers.insert(currentThread());
+}
+
 bool isMainThread()
 {
-    return currentThread() == mainThreadIdentifier;
+    return mainThreadIdentifiers.find(currentThread()) != mainThreadIdentifiers.end();
 }
 #endif
 

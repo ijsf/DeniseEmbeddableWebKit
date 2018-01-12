@@ -80,7 +80,7 @@ namespace WebKit {
 void WebPlatformStrategies::initialize()
 {
     static NeverDestroyed<WebPlatformStrategies> platformStrategies;
-    setPlatformStrategies(&platformStrategies.get());
+    setPlatformStrategies(PLATFORM_WEB, &platformStrategies.get());
 }
 
 WebPlatformStrategies::WebPlatformStrategies()

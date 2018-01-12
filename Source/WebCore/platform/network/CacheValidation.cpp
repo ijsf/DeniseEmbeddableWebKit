@@ -346,7 +346,7 @@ static String headerValueForVary(const ResourceRequest& request, const String& h
     // We could fetch the cookie when making the request but that seems overkill as the case is very rare and it
     // is a blocking operation. This should be sufficient to cover reasonable cases.
     if (headerName == httpHeaderNameString(HTTPHeaderName::Cookie)) {
-        auto* cookieStrategy = platformStrategies() ? platformStrategies()->cookiesStrategy() : nullptr;
+        auto* cookieStrategy = platformStrategies(PLATFORM_NETWORK) ? platformStrategies(PLATFORM_NETWORK)->cookiesStrategy() : nullptr;
         if (!cookieStrategy) {
             ASSERT(sessionID == SessionID::defaultSessionID());
             return cookieRequestHeaderFieldValue(NetworkStorageSession::defaultStorageSession(), request.firstPartyForCookies(), request.url());

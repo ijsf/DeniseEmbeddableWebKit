@@ -91,12 +91,12 @@ int InspectorInstrumentation::s_frontendCounter = 0;
 
 void InspectorInstrumentation::firstFrontendCreated()
 {
-    platformStrategies()->loaderStrategy()->setCaptureExtraNetworkLoadMetricsEnabled(true);
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->setCaptureExtraNetworkLoadMetricsEnabled(true);
 }
 
 void InspectorInstrumentation::lastFrontendDeleted()
 {
-    platformStrategies()->loaderStrategy()->setCaptureExtraNetworkLoadMetricsEnabled(false);
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->setCaptureExtraNetworkLoadMetricsEnabled(false);
 }
 
 static Frame* frameForScriptExecutionContext(ScriptExecutionContext* context)

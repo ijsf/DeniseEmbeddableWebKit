@@ -130,14 +130,14 @@ void Pasteboard::writeToClipboard()
     if (m_name.isNull())
         return;
 
-    platformStrategies()->pasteboardStrategy()->writeToClipboard(m_name, m_selectionData);
+    platformStrategies(PLATFORM_WEB)->pasteboardStrategy()->writeToClipboard(m_name, m_selectionData);
 }
 
 void Pasteboard::readFromClipboard()
 {
     if (m_name.isNull())
         return;
-    m_selectionData = platformStrategies()->pasteboardStrategy()->readFromClipboard(m_name);
+    m_selectionData = platformStrategies(PLATFORM_WEB)->pasteboardStrategy()->readFromClipboard(m_name);
 }
 
 void Pasteboard::writeString(const String& type, const String& data)

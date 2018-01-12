@@ -77,7 +77,7 @@ ResourceLoader::~ResourceLoader()
 
 void ResourceLoader::finishNetworkLoad()
 {
-    platformStrategies()->loaderStrategy()->remove(this);
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->remove(this);
 
     if (m_handle) {
         ASSERT(m_handle->client() == this);
@@ -230,7 +230,7 @@ void ResourceLoader::setDefersLoading(bool defers)
         start();
     }
 
-    platformStrategies()->loaderStrategy()->setDefersLoading(this, defers);
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->setDefersLoading(this, defers);
 }
 
 FrameLoader* ResourceLoader::frameLoader() const
@@ -291,7 +291,7 @@ void ResourceLoader::setDataBufferingPolicy(DataBufferingPolicy dataBufferingPol
 void ResourceLoader::willSwitchToSubstituteResource()
 {
     ASSERT(!m_documentLoader->isSubstituteLoadPending(this));
-    platformStrategies()->loaderStrategy()->remove(this);
+    platformStrategies(PLATFORM_WEB)->loaderStrategy()->remove(this);
     if (m_handle)
         m_handle->cancel();
 }
@@ -386,7 +386,7 @@ void ResourceLoader::willSendRequestInternal(ResourceRequest& request, const Res
 
     bool isRedirect = !redirectResponse.isNull();
     if (isRedirect)
-        platformStrategies()->loaderStrategy()->crossOriginRedirectReceived(this, request.url());
+        platformStrategies(PLATFORM_WEB)->loaderStrategy()->crossOriginRedirectReceived(this, request.url());
 
     m_request = request;
 

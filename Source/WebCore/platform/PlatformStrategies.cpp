@@ -28,25 +28,25 @@
 
 namespace WebCore {
 
-static PlatformStrategies* s_platformStrategies;
+static PlatformStrategies* s_platformStrategies[PLATFORM_MAX];
 
-PlatformStrategies* platformStrategies()
+PlatformStrategies* platformStrategies(const ePlatformStrategyType type)
 {
-    ASSERT(s_platformStrategies);
+    ASSERT(s_platformStrategies[type]);
     
-    return s_platformStrategies;
+    return s_platformStrategies[type];
 }
 
-void setPlatformStrategies(PlatformStrategies* platformStrategies)
+void setPlatformStrategies(const ePlatformStrategyType type, PlatformStrategies* platformStrategies)
 {
-    if (!s_platformStrategies) {
-        s_platformStrategies = platformStrategies;
+    if (!s_platformStrategies[type]) {
+        s_platformStrategies[type] = platformStrategies;
         return;
     }
     
     // FIXME: This happens when mixing different platform strategies, and we should probably
     // throw an exception here in release builds.
-    ASSERT(platformStrategies == s_platformStrategies);
+    ASSERT(platformStrategies == s_platformStrategies[type]);
 }
 
 } // namespace WebCore

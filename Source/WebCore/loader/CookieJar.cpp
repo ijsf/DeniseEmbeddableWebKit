@@ -58,32 +58,32 @@ String cookies(const Document& document, const URL& url)
 {
     TraceScope scope(FetchCookiesStart, FetchCookiesEnd);
 
-    return platformStrategies()->cookiesStrategy()->cookiesForDOM(storageSession(document), document.firstPartyForCookies(), url);
+    return platformStrategies(PLATFORM_WEB)->cookiesStrategy()->cookiesForDOM(storageSession(document), document.firstPartyForCookies(), url);
 }
 
 void setCookies(Document& document, const URL& url, const String& cookieString)
 {
-    platformStrategies()->cookiesStrategy()->setCookiesFromDOM(storageSession(document), document.firstPartyForCookies(), url, cookieString);
+    platformStrategies(PLATFORM_WEB)->cookiesStrategy()->setCookiesFromDOM(storageSession(document), document.firstPartyForCookies(), url, cookieString);
 }
 
 bool cookiesEnabled(const Document& document)
 {
-    return platformStrategies()->cookiesStrategy()->cookiesEnabled(storageSession(document), document.firstPartyForCookies(), document.cookieURL());
+    return platformStrategies(PLATFORM_WEB)->cookiesStrategy()->cookiesEnabled(storageSession(document), document.firstPartyForCookies(), document.cookieURL());
 }
 
 String cookieRequestHeaderFieldValue(const Document& document, const URL& url)
 {
-    return platformStrategies()->cookiesStrategy()->cookieRequestHeaderFieldValue(storageSession(document), document.firstPartyForCookies(), url);
+    return platformStrategies(PLATFORM_WEB)->cookiesStrategy()->cookieRequestHeaderFieldValue(storageSession(document), document.firstPartyForCookies(), url);
 }
 
 bool getRawCookies(const Document& document, const URL& url, Vector<Cookie>& cookies)
 {
-    return platformStrategies()->cookiesStrategy()->getRawCookies(storageSession(document), document.firstPartyForCookies(), url, cookies);
+    return platformStrategies(PLATFORM_WEB)->cookiesStrategy()->getRawCookies(storageSession(document), document.firstPartyForCookies(), url, cookies);
 }
 
 void deleteCookie(const Document& document, const URL& url, const String& cookieName)
 {
-    platformStrategies()->cookiesStrategy()->deleteCookie(storageSession(document), url, cookieName);
+    platformStrategies(PLATFORM_WEB)->cookiesStrategy()->deleteCookie(storageSession(document), url, cookieName);
 }
 
 }

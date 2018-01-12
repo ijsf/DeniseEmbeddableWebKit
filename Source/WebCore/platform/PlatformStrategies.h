@@ -83,7 +83,14 @@ private:
     BlobRegistry* m_blobRegistry { };
 };
 
-WEBCORE_EXPORT PlatformStrategies* platformStrategies();
-WEBCORE_EXPORT void setPlatformStrategies(PlatformStrategies*);
+enum ePlatformStrategyType {
+    PLATFORM_WEB = 0,
+    PLATFORM_NETWORK,
+
+    PLATFORM_MAX
+};
+
+WEBCORE_EXPORT PlatformStrategies* platformStrategies(const ePlatformStrategyType);
+WEBCORE_EXPORT void setPlatformStrategies(const ePlatformStrategyType, PlatformStrategies*);
     
 } // namespace WebCore
