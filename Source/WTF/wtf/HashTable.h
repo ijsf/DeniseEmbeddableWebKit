@@ -584,7 +584,6 @@ namespace WTF {
     {
         if (!HashFunctions::safeToCompareToEmptyOrDeleted)
             return;
-        ASSERT(!HashTranslator::equal(KeyTraits::emptyValue(), key));
         typename std::aligned_storage<sizeof(ValueType), std::alignment_of<ValueType>::value>::type deletedValueBuffer;
         ValueType* deletedValuePtr = reinterpret_cast_ptr<ValueType*>(&deletedValueBuffer);
         ValueType& deletedValue = *deletedValuePtr;
