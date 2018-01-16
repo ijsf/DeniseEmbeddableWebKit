@@ -3932,3 +3932,8 @@ void webkit_web_view_restore_session_state(WebKitWebView* webView, WebKitWebView
 
     getPage(webView).restoreFromSessionState(webkitWebViewSessionStateGetSessionState(state), false);
 }
+
+void webkit_web_view_set_paint_callback(WebKitWebView* webView, WebKitWebViewPaintCallback callback)
+{
+    webkitWebViewBaseSetPaintCallback(WEBKIT_WEB_VIEW_BASE(webView), callback);
+}

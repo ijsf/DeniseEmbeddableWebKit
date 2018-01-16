@@ -28,8 +28,11 @@
 
 #include <WebCore/IntRect.h>
 #include <wtf/Noncopyable.h>
+#include <functional>
 
 #if USE(CAIRO)
+#include <glib-object.h>
+#include <gtk/gtk.h>
 #include <WebCore/BackingStoreBackendCairo.h>
 #endif
 
@@ -53,6 +56,12 @@ public:
     typedef cairo_t* PlatformGraphicsContext;
 #endif
 
+#if USE(CAIRO)
+    // Note that WTF::Function is inadequate due to its missing copy constructor
+    typedef std::function<void(uint8_t *, float, const GdkPoint&, const GdkRectangle&, const GdkRectangle&)> PaintCallback;
+    void setPaintCallback(PaintCallback);
+#endif
+
     void paint(PlatformGraphicsContext, const WebCore::IntRect&);
     void incorporateUpdate(const UpdateInfo&);
 
@@ -62,6 +71,10 @@ private:
 
 #if USE(CAIRO)
     std::unique_ptr<WebCore::BackingStoreBackendCairo> createBackend();
+#endif
+
+#if USE(CAIRO)
+    PaintCallback m_paintCallback;
 #endif
 
     WebCore::IntSize m_size;

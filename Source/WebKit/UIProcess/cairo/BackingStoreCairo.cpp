@@ -78,6 +78,11 @@ void BackingStore::paint(cairo_t* context, const IntRect& rect)
     cairo_restore(context);
 }
 
+void BackingStore::setPaintCallback(PaintCallback paintCallback)
+{
+    m_paintCallback = paintCallback;
+}
+
 void BackingStore::incorporateUpdate(ShareableBitmap* bitmap, const UpdateInfo& updateInfo)
 {
     if (!m_backend)
@@ -99,6 +104,12 @@ void BackingStore::incorporateUpdate(ShareableBitmap* bitmap, const UpdateInfo& 
                 graphicsContext.clearRect(srcRect);
             if (color.isVisible())
                 graphicsContext.fillRect(srcRect, color);
+        }
+        if(m_paintCallback) {
+            const GdkPoint dstPoint_ = { updateRect.location().x(), updateRect.location().y() };
+            const GdkRectangle srcRect_ = { srcRect.x(), srcRect.y(), srcRect.width(), srcRect.height() };
+            const GdkRectangle srcSize_ = { 0, 0, bitmap->size().width(), bitmap->size().height() };
+            m_paintCallback((uint8_t *)bitmap->data(), deviceScaleFactor(), dstPoint_, srcSize_, srcRect_);
         }
 #endif
         bitmap->paint(graphicsContext, deviceScaleFactor(), updateRect.location(), srcRect);

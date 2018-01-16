@@ -160,8 +160,10 @@ void DrawingAreaProxyImpl::incorporateUpdate(const UpdateInfo& updateInfo)
     if (updateInfo.updateRectBounds.isEmpty())
         return;
 
-    if (!m_backingStore)
+    if (!m_backingStore) {
         m_backingStore = std::make_unique<BackingStore>(updateInfo.viewSize, updateInfo.deviceScaleFactor, m_webPageProxy);
+        m_backingStore->setPaintCallback(m_paintCallback);
+    }
 
     m_backingStore->incorporateUpdate(updateInfo);
 
@@ -268,6 +270,14 @@ void DrawingAreaProxyImpl::dispatchAfterEnsuringDrawing(WTF::Function<void(Callb
     if (!m_drawingMonitor)
         m_drawingMonitor = std::make_unique<DrawingAreaProxyImpl::DrawingMonitor>(m_webPageProxy);
     m_drawingMonitor->start(WTFMove(callbackFunction));
+}
+
+void DrawingAreaProxyImpl::setPaintCallback(BackingStore::PaintCallback paintCallback)
+{
+    m_paintCallback = paintCallback;
+    if (m_backingStore) {
+        m_backingStore->setPaintCallback(m_paintCallback);
+    }
 }
 
 } // namespace WebKit

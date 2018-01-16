@@ -44,6 +44,10 @@ public:
 
     void paint(BackingStore::PlatformGraphicsContext, const WebCore::IntRect&, WebCore::Region& unpaintedRegion);
 
+#if USE(CAIRO)
+    void setPaintCallback(BackingStore::PaintCallback);
+#endif
+
 private:
     // DrawingAreaProxy
     void setBackingStoreIsDiscardable(bool) override;
@@ -86,6 +90,10 @@ private:
     std::unique_ptr<BackingStore> m_backingStore;
     RunLoop::Timer<DrawingAreaProxyImpl> m_discardBackingStoreTimer;
     std::unique_ptr<DrawingMonitor> m_drawingMonitor;
+
+#if USE(CAIRO)
+    BackingStore::PaintCallback m_paintCallback;
+#endif
 };
 
 } // namespace WebKit

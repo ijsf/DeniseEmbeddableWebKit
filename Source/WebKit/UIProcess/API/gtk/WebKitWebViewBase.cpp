@@ -1506,3 +1506,12 @@ void webkitWebViewBasePageClosed(WebKitWebViewBase* webkitWebViewBase)
     drawingArea->destroyNativeSurfaceHandleForCompositing();
 #endif
 }
+
+void webkitWebViewBaseSetPaintCallback(WebKitWebViewBase* webkitWebViewBase, WebKit::BackingStore::PaintCallback paintCallback)
+{
+    // NOTE: does not support AcceleratedCompositing mode!
+
+    // Pass on to DrawingAreaProxyImpl, which will pass it on to BackingStore
+    DrawingAreaProxyImpl* drawingArea = static_cast<DrawingAreaProxyImpl*>(webkitWebViewBase->priv->pageProxy->drawingArea());
+    drawingArea->setPaintCallback(paintCallback);
+}

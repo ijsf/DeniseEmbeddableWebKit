@@ -34,6 +34,7 @@
 #include "WebInspectorProxy.h"
 #include "WebKitWebViewBase.h"
 #include "WebPageProxy.h"
+#include "BackingStore.h"
 
 WebKitWebViewBase* webkitWebViewBaseCreate(const API::PageConfiguration&);
 GtkIMContext* webkitWebViewBaseGetIMContext(WebKitWebViewBase*);
@@ -78,3 +79,5 @@ WebKit::DragAndDropHandler& webkitWebViewBaseDragAndDropHandler(WebKitWebViewBas
 #if HAVE(GTK_GESTURES)
 WebKit::GestureController& webkitWebViewBaseGestureController(WebKitWebViewBase*);
 #endif
+
+void webkitWebViewBaseSetPaintCallback(WebKitWebViewBase*, WebKit::BackingStore::PaintCallback);

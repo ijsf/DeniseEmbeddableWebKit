@@ -95,6 +95,7 @@ public:
 
     const WebCore::IntSize& size() const { return m_size; }
     WebCore::IntRect bounds() const { return WebCore::IntRect(WebCore::IntPoint(), size()); }
+    void* data() const;
 
     // Create a graphics context that can be used to paint into the backing store.
     std::unique_ptr<WebCore::GraphicsContext> createGraphicsContext();
@@ -143,7 +144,6 @@ private:
     static void releaseSurfaceData(void* typelessBitmap);
 #endif
 
-    void* data() const;
 #if USE(CAIRO)
     size_t sizeInBytes() const { return numBytesForSize(m_size).unsafeGet(); }
 #else

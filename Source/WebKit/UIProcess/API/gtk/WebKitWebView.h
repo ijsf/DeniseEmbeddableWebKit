@@ -527,4 +527,18 @@ webkit_web_view_restore_session_state                (WebKitWebView             
 
 G_END_DECLS
 
+// Requires C++11 or higher
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#include <glib-object.h>
+#include <gtk/gtk.h>
+#include <functional>
+
+// WebKit::BackingStore::PaintCallback
+typedef std::function<void(uint8_t *, float, const GdkPoint&, const GdkRectangle&, const GdkRectangle&)> WebKitWebViewPaintCallback;
+
+WEBKIT_API void
+webkit_web_view_set_paint_callback                   (WebKitWebView             *web_view,
+                                                      WebKitWebViewPaintCallback callback);
+#endif
+
 #endif
