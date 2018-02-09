@@ -37,6 +37,7 @@
 #include "HostWindow.h"
 #include "NotImplemented.h"
 #include "Widget.h"
+#include "GtkUtilities.h"
 
 #include <gtk/gtk.h>
 
@@ -45,7 +46,7 @@ namespace WebCore {
 static GtkWidget* getToplevel(GtkWidget* widget)
 {
     GtkWidget* toplevel = gtk_widget_get_toplevel(widget);
-    return gtk_widget_is_toplevel(toplevel) ? toplevel : 0;
+    return widgetIsOnscreenToplevelWindow(toplevel) ? toplevel : 0;
 }
 
 static GdkVisual* getVisual(Widget* widget)

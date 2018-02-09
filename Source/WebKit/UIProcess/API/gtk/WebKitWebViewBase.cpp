@@ -1312,7 +1312,7 @@ void webkitWebViewBaseEnterFullScreen(WebKitWebViewBase* webkitWebViewBase)
     fullScreenManagerProxy->willEnterFullScreen();
 
     GtkWidget* topLevelWindow = gtk_widget_get_toplevel(GTK_WIDGET(webkitWebViewBase));
-    if (gtk_widget_is_toplevel(topLevelWindow))
+    if (widgetIsOnscreenToplevelWindow(topLevelWindow))
         gtk_window_fullscreen(GTK_WINDOW(topLevelWindow));
     fullScreenManagerProxy->didEnterFullScreen();
     priv->fullScreenModeActive = true;
@@ -1330,7 +1330,7 @@ void webkitWebViewBaseExitFullScreen(WebKitWebViewBase* webkitWebViewBase)
     fullScreenManagerProxy->willExitFullScreen();
 
     GtkWidget* topLevelWindow = gtk_widget_get_toplevel(GTK_WIDGET(webkitWebViewBase));
-    if (gtk_widget_is_toplevel(topLevelWindow))
+    if (widgetIsOnscreenToplevelWindow(topLevelWindow))
         gtk_window_unfullscreen(GTK_WINDOW(topLevelWindow));
     fullScreenManagerProxy->didExitFullScreen();
     priv->fullScreenModeActive = false;
