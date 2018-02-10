@@ -41,6 +41,107 @@ static void webViewReadyToShow(WebKitWebView *webView, class Browser *data)
 // Internal functions
 ///////////////////////////////////////////////////////////////////////////////
 
+static guint keyToGdkKey(const unsigned int key) {
+    switch(key) {
+        case Browser::Key::KEY_SPACE:
+            return GDK_KEY_space;
+        case Browser::Key::KEY_ESCAPE:
+            return GDK_KEY_Escape;
+        case Browser::Key::KEY_RETURN:
+            return GDK_KEY_Return;
+        case Browser::Key::KEY_TAB:
+            return GDK_KEY_Tab;
+        case Browser::Key::KEY_DELETE:
+            return GDK_KEY_Delete;
+        case Browser::Key::KEY_BACKSPACE:
+            return GDK_KEY_BackSpace;
+        case Browser::Key::KEY_INSERT:
+            return GDK_KEY_Insert;
+        case Browser::Key::KEY_UP:
+            return GDK_KEY_Up;
+        case Browser::Key::KEY_DOWN:
+            return GDK_KEY_Down;
+        case Browser::Key::KEY_LEFT:
+            return GDK_KEY_Left;
+        case Browser::Key::KEY_RIGHT:
+            return GDK_KEY_Right;
+        case Browser::Key::KEY_PAGE_UP:
+            return GDK_KEY_Page_Up;
+        case Browser::Key::KEY_PAGE_DOWN:
+            return GDK_KEY_Page_Down;
+        case Browser::Key::KEY_HOME:
+            return GDK_KEY_Home;
+        case Browser::Key::KEY_END:
+            return GDK_KEY_End;
+
+        case Browser::Key::KEY_F1:
+            return GDK_KEY_F1;
+        case Browser::Key::KEY_F2:
+            return GDK_KEY_F2;
+        case Browser::Key::KEY_F3:
+            return GDK_KEY_F3;
+        case Browser::Key::KEY_F4:
+            return GDK_KEY_F4;
+        case Browser::Key::KEY_F5:
+            return GDK_KEY_F5;
+        case Browser::Key::KEY_F6:
+            return GDK_KEY_F6;
+        case Browser::Key::KEY_F7:
+            return GDK_KEY_F7;
+        case Browser::Key::KEY_F8:
+            return GDK_KEY_F8;
+        case Browser::Key::KEY_F9:
+            return GDK_KEY_F9;
+        case Browser::Key::KEY_F10:
+            return GDK_KEY_F10;
+        case Browser::Key::KEY_F11:
+            return GDK_KEY_F11;
+        case Browser::Key::KEY_F12:
+            return GDK_KEY_F12;
+
+        case Browser::Key::KEY_NUMPAD_0:
+            return GDK_KEY_KP_0;
+        case Browser::Key::KEY_NUMPAD_1:
+            return GDK_KEY_KP_1;
+        case Browser::Key::KEY_NUMPAD_2:
+            return GDK_KEY_KP_2;
+        case Browser::Key::KEY_NUMPAD_3:
+            return GDK_KEY_KP_3;
+        case Browser::Key::KEY_NUMPAD_4:
+            return GDK_KEY_KP_4;
+        case Browser::Key::KEY_NUMPAD_5:
+            return GDK_KEY_KP_5;
+        case Browser::Key::KEY_NUMPAD_6:
+            return GDK_KEY_KP_6;
+        case Browser::Key::KEY_NUMPAD_7:
+            return GDK_KEY_KP_7;
+        case Browser::Key::KEY_NUMPAD_8:
+            return GDK_KEY_KP_8;
+        case Browser::Key::KEY_NUMPAD_9:
+            return GDK_KEY_KP_9;
+
+        case Browser::Key::KEY_NUMPAD_ADD:
+            return GDK_KEY_KP_Add;
+        case Browser::Key::KEY_NUMPAD_SUBTRACT:
+            return GDK_KEY_KP_Subtract;
+        case Browser::Key::KEY_NUMPAD_MULTIPLY:
+            return GDK_KEY_KP_Multiply;
+        case Browser::Key::KEY_NUMPAD_DIVIDE:
+            return GDK_KEY_KP_Divide;
+        case Browser::Key::KEY_NUMPAD_SEPARATOR:
+            return GDK_KEY_KP_Separator;
+        case Browser::Key::KEY_NUMPAD_DECIMAL:
+            return GDK_KEY_KP_Decimal;
+        case Browser::Key::KEY_NUMPAD_EQUAL:
+            return GDK_KEY_KP_Equal;
+        case Browser::Key::KEY_NUMPAD_DELETE:
+            return GDK_KEY_KP_Delete;
+        default:
+            // Must be an ASCII keycode
+            return (guint)key;
+    };
+}
+
 static guint modifierToGdkState(Browser::ModifierKeys keys)
 {
     guint state = 0;
@@ -114,6 +215,30 @@ static void doMotionEvent(GtkWidget* widget, int x, int y, guint state)
     event->motion.y_root = yRoot;
     gtk_main_do_event(event);
     //g_free(event);
+}
+
+static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal, guint state, bool doReleaseAfterPress = false)
+{
+    GdkEvent* event = gdk_event_new(type);
+    event->key.keyval = keyVal;
+
+    event->key.time = GDK_CURRENT_TIME;
+    event->key.window = gtk_widget_get_window(widget);
+    g_object_ref(event->key.window);
+    gdk_event_set_device(event, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(widget))));
+    event->key.state = state;
+
+    // When synthesizing an event, an invalid hardware_keycode value can cause it to be badly processed by GTK+.
+    GdkKeymapKey* keys;
+    int keysCount;
+    if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyVal, &keys, &keysCount) && keysCount)
+        event->key.hardware_keycode = keys[0].keycode;
+
+    gtk_main_do_event(event);
+    if (doReleaseAfterPress) {
+        event->key.type = GDK_KEY_RELEASE;
+        gtk_main_do_event(event);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -271,6 +396,18 @@ void Browser::mouseUp(int x, int y, ModifierKeys modifier)
         y,
         modifierToGdkButton(modifier),
         modifierToGdkState(modifier)
+    );
+}
+
+void Browser::keyPress(const unsigned int key, const ModifierKeys modifierKeys)
+{
+    // Immediate press + release
+    doKeyStrokeEvent(
+        GDK_KEY_PRESS,
+        GTK_WIDGET(m_private->webView),
+        keyToGdkKey(key),
+        modifierToGdkState(modifierKeys),
+        true
     );
 }
 
