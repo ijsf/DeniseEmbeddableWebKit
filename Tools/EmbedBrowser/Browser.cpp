@@ -159,6 +159,9 @@ void Browser::initialize(int width, int height)
         g_WebKitData.initialized = true;
 
         gtk_init(NULL, NULL);   // THREADCHECK
+        
+        // Make sure the default im module imquartz is not used on OS X, as this will cause a crash with GtkOffscreenWindow
+        g_object_set(gtk_settings_get_default(), "gtk-im-module", "gtk-im-context-simple", NULL);
 
         WebKitWebContext *globalContext = webkit_web_context_get_default();
 
