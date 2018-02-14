@@ -5,6 +5,7 @@
 #include <gdk/gdk.h>
 
 #include "Browser.h"
+#include "Extension.h"
 
 #define UNUSED_PARAM(variable) (void)variable
 
@@ -269,149 +270,6 @@ static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Denise specific code
-///////////////////////////////////////////////////////////////////////////////
-
-// We use static functions for now for convenience, but a better option would be to define all of this inside the Browser class
-Browser::SetHeaderCallback deniseSetHeaderCallback;
-
-/*
-    interface ErrorObject {
-      ErrorCode code,
-      string message
-    }
-*/
-JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseError error, const std::string message) {
-    JSObjectRef obj = JSObjectMake(context, NULL, NULL);
-
-    JSStringRef strCode = JSStringCreateWithUTF8CString("code");
-    JSObjectSetProperty(context, obj, strCode, JSValueMakeNumber(context, (int)error), kJSPropertyAttributeNone, NULL);
-    JSStringRelease(strCode);
-
-    JSStringRef strMessage = JSStringCreateWithUTF8CString("message");
-    JSStringRef strErrorMessage = JSStringCreateWithUTF8CString(message.c_str());
-    JSObjectSetProperty(context, obj, strMessage, JSValueMakeString(context, strErrorMessage), kJSPropertyAttributeNone, NULL);
-    JSStringRelease(strErrorMessage);
-    JSStringRelease(strMessage);
-    
-    return obj;
-}
-
-JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseError error, const JSValueRef message) {
-    JSObjectRef obj = JSObjectMake(context, NULL, NULL);
-
-    JSStringRef strCode = JSStringCreateWithUTF8CString("code");
-    JSObjectSetProperty(context, obj, strCode, JSValueMakeNumber(context, (int)error), kJSPropertyAttributeNone, NULL);
-    JSStringRelease(strCode);
-
-    JSStringRef strMessage = JSStringCreateWithUTF8CString("message");
-    JSObjectSetProperty(context, obj, strMessage, message, kJSPropertyAttributeNone, NULL);
-    JSStringRelease(strMessage);
-    
-    return obj;
-}
-
-JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
-    UNUSED_PARAM(object);
-    UNUSED_PARAM(thisObject);
-    
-    /* DeniseWrapper.loadProduct(payload: ProductPayload, callback: function(err: ErrorCode)) */
-    if (argumentCount == 2) {
-        // STUB
-    }
-    else {
-        JSStringRef message = JSStringCreateWithUTF8CString("TypeError: function requires 2 arguments");
-        *exception = JSValueMakeString(context, message);
-        JSStringRelease(message);
-    }
-
-    return JSValueMakeUndefined(context);
-}
-
-JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
-    UNUSED_PARAM(object);
-    UNUSED_PARAM(thisObject);
-
-    // Error related parameters
-    JSObjectRef objCallback;
-    
-    /* DeniseWrapper.setHeader({ visible: boolean }, callback: function(err: ErrorCode)) */
-    if (argumentCount == 2) {
-        // Get parameters
-        JSObjectRef objParams = JSValueToObject(context, arguments[0], exception);
-        if (!exception) {
-            // params.visible
-            if (!exception) {
-                JSStringRef strVisible = JSStringCreateWithUTF8CString("visible");
-                const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, strVisible, exception));
-                if(!exception && deniseSetHeaderCallback) {
-                    deniseSetHeaderCallback(visible);
-                }
-                JSStringRelease(strVisible);
-            }
-            // ...
-        }
-        if (!exception) {
-            JSObjectRef _callback = JSValueToObject(context, arguments[1], exception);
-            if (!exception) {
-                if(!JSObjectIsFunction(context, _callback)) {
-                    JSStringRef strError = JSStringCreateWithUTF8CString("TypeError: callback is not a function");
-                    *exception = JSValueMakeString(context, strError);
-                    JSStringRelease(strError);
-                }
-            }
-            if (!exception) {
-                // Assume valid callback function object
-                objCallback = _callback;
-            }
-        }
-    }
-    else {
-        JSStringRef strError = JSStringCreateWithUTF8CString("TypeError: function requires 2 arguments");
-        *exception = JSValueMakeString(context, strError);
-        JSStringRelease(strError);
-    }
-
-    // Fall-through code path for all cases
-    
-    // Check for exception, in which case we call the callback, if it is defined at this point
-    if (exception) {
-        // Assume ERROR_INVALID_PARAMETERS as code for any errors occurring above,
-        // use the string contained inside exception as message.
-        
-        /* function(err) */
-        JSValueRef args[] = { deniseMakeErrorObject(context, Browser::DeniseError::ERROR_INVALID_PARAMETERS, *exception) };
-        JSObjectCallAsFunction(context, objCallback, NULL, 1, args, NULL);
-    }
-    
-    return JSValueMakeUndefined(context);
-}
-
-void deniseBindJS(JSGlobalContextRef context) {
-    JSObjectRef objGlobal = JSContextGetGlobalObject(context);
-    if (objGlobal) {
-        // Create DeniseWrapper object as default JS Object
-        JSObjectRef objDeniseWrapper = JSObjectMake(context, NULL, NULL);
-        // Create function DeniseWrapper.loadProduct
-        {
-            JSStringRef strLoadProduct = JSStringCreateWithUTF8CString("loadProduct");
-            JSObjectSetProperty(context, objDeniseWrapper, strLoadProduct, JSObjectMakeFunctionWithCallback(context, strLoadProduct, deniseJSLoadProduct), kJSPropertyAttributeNone, NULL);
-            JSStringRelease(strLoadProduct);
-        }
-        // Create function DeniseWrapper.setHeader
-        {
-            JSStringRef strSetHeader = JSStringCreateWithUTF8CString("setHeader");
-            JSObjectSetProperty(context, objDeniseWrapper, strSetHeader, JSObjectMakeFunctionWithCallback(context, strSetHeader, deniseJSSetHeader), kJSPropertyAttributeNone, NULL);
-            JSStringRelease(strSetHeader);
-        }
-    }
-    else {
-        // Unable to get JS global context
-        assert(false);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // Browser class
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -452,15 +310,15 @@ void Browser::initialize(int width, int height)
     if (!g_WebKitData.initialized) {
         g_WebKitData.initialized = true;
 
-        gtk_init(NULL, NULL);   // THREADCHECK
+        gtk_init(nullptr, nullptr);   // THREADCHECK
         
         // Make sure the default im module imquartz is not used on OS X, as this will cause a crash with GtkOffscreenWindow
-        g_object_set(gtk_settings_get_default(), "gtk-im-module", "gtk-im-context-simple", NULL);
+        g_object_set(gtk_settings_get_default(), "gtk-im-module", "gtk-im-context-simple", nullptr);
 
         WebKitWebContext *globalContext = webkit_web_context_get_default();
 
         // Store thread id for thread safety checks
-        pthread_threadid_np(NULL, &g_WebKitData.tid);
+        pthread_threadid_np(nullptr, &g_WebKitData.tid);
 
         // Settings
         g_WebKitData.settings = webkit_settings_new();
@@ -515,7 +373,7 @@ void Browser::initialize(int width, int height)
     gtk_widget_show_all(window);
     
     /// DENISE BEGIN
-    deniseBindJS(webkit_web_view_get_javascript_global_context(m_private->webView));
+    registerWebExtension(this);
     /// DENISE END
 
     m_private->initialized = true;
@@ -525,7 +383,7 @@ void Browser::tick()
 {
     // Thread safety check (caller thread must be identical for all GTK calls)
     uint64_t tid;
-    pthread_threadid_np(NULL, &tid);
+    pthread_threadid_np(nullptr, &tid);
     assert(tid == g_WebKitData.tid);
     
     // ACHTUNG check if necessary

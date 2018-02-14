@@ -10,6 +10,8 @@ file(MAKE_DIRECTORY ${DERIVED_SOURCES_EMBEDBROWSER_DIR})
 set(EmbedBrowser_SOURCES
     ${EMBEDBROWSER_DIR}/Browser.cpp
     ${EMBEDBROWSER_DIR}/Browser.h
+    ${EMBEDBROWSER_DIR}/Extension.cpp
+    ${EMBEDBROWSER_DIR}/Extension.h
 )
 
 set(EmbedBrowser_INCLUDE_DIRECTORIES
