@@ -1,8 +1,12 @@
 #include <webkit2/webkit2.h>
+#include <JavaScriptCore/JavaScript.h>
+
 #include <pthread.h>
 #include <gdk/gdk.h>
 
 #include "Browser.h"
+
+#define UNUSED_PARAM(variable) (void)variable
 
 namespace WebKitEmbed
 {
@@ -27,8 +31,10 @@ static WebKitGlobalData g_WebKitData;
 // GTK callbacks
 ///////////////////////////////////////////////////////////////////////////////
 
-static void webViewReadyToShow(WebKitWebView *webView, class Browser *data)
+static void webViewReadyToShow(WebKitWebView *webView, class Browser *browser)
 {
+    UNUSED_PARAM(browser);
+
     WebKitWindowProperties *windowProperties = webkit_web_view_get_window_properties(webView);
 
     GdkRectangle geometry;
@@ -37,6 +43,27 @@ static void webViewReadyToShow(WebKitWebView *webView, class Browser *data)
     printf("webViewReadyToShow (%u,%u,%u,%u)\n", geometry.x, geometry.y, geometry.width, geometry.height);
 }
 
+/* Based on Tools/TestWebKitAPI/glib/WebKitGLib/WebViewTest.cpp */
+#include <JavaScriptCore/JSRetainPtr.h>
+static char* jsValueToCString(JSGlobalContextRef context, JSValueRef value)
+{
+    g_assert(value);
+    g_assert(JSValueIsString(context, value));
+
+    JSRetainPtr<JSStringRef> stringValue(Adopt, JSValueToStringCopy(context, value, 0));
+    g_assert(stringValue);
+
+    size_t cStringLength = JSStringGetMaximumUTF8CStringSize(stringValue.get());
+    char* cString = static_cast<char*>(g_malloc(cStringLength));
+    JSStringGetUTF8CString(stringValue.get(), cString, cStringLength);
+    return cString;
+}
+char* javascriptResultToCString(WebKitJavascriptResult* javascriptResult)
+{
+    JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
+    g_assert(context);
+    return jsValueToCString(context, webkit_javascript_result_get_value(javascriptResult));
+}
 ///////////////////////////////////////////////////////////////////////////////
 // Internal functions
 ///////////////////////////////////////////////////////////////////////////////
@@ -242,6 +269,149 @@ static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// Denise specific code
+///////////////////////////////////////////////////////////////////////////////
+
+// We use static functions for now for convenience, but a better option would be to define all of this inside the Browser class
+Browser::SetHeaderCallback deniseSetHeaderCallback;
+
+/*
+    interface ErrorObject {
+      ErrorCode code,
+      string message
+    }
+*/
+JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseError error, const std::string message) {
+    JSObjectRef obj = JSObjectMake(context, NULL, NULL);
+
+    JSStringRef strCode = JSStringCreateWithUTF8CString("code");
+    JSObjectSetProperty(context, obj, strCode, JSValueMakeNumber(context, (int)error), kJSPropertyAttributeNone, NULL);
+    JSStringRelease(strCode);
+
+    JSStringRef strMessage = JSStringCreateWithUTF8CString("message");
+    JSStringRef strErrorMessage = JSStringCreateWithUTF8CString(message.c_str());
+    JSObjectSetProperty(context, obj, strMessage, JSValueMakeString(context, strErrorMessage), kJSPropertyAttributeNone, NULL);
+    JSStringRelease(strErrorMessage);
+    JSStringRelease(strMessage);
+    
+    return obj;
+}
+
+JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseError error, const JSValueRef message) {
+    JSObjectRef obj = JSObjectMake(context, NULL, NULL);
+
+    JSStringRef strCode = JSStringCreateWithUTF8CString("code");
+    JSObjectSetProperty(context, obj, strCode, JSValueMakeNumber(context, (int)error), kJSPropertyAttributeNone, NULL);
+    JSStringRelease(strCode);
+
+    JSStringRef strMessage = JSStringCreateWithUTF8CString("message");
+    JSObjectSetProperty(context, obj, strMessage, message, kJSPropertyAttributeNone, NULL);
+    JSStringRelease(strMessage);
+    
+    return obj;
+}
+
+JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
+    UNUSED_PARAM(object);
+    UNUSED_PARAM(thisObject);
+    
+    /* DeniseWrapper.loadProduct(payload: ProductPayload, callback: function(err: ErrorCode)) */
+    if (argumentCount == 2) {
+        // STUB
+    }
+    else {
+        JSStringRef message = JSStringCreateWithUTF8CString("TypeError: function requires 2 arguments");
+        *exception = JSValueMakeString(context, message);
+        JSStringRelease(message);
+    }
+
+    return JSValueMakeUndefined(context);
+}
+
+JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
+    UNUSED_PARAM(object);
+    UNUSED_PARAM(thisObject);
+
+    // Error related parameters
+    JSObjectRef objCallback;
+    
+    /* DeniseWrapper.setHeader({ visible: boolean }, callback: function(err: ErrorCode)) */
+    if (argumentCount == 2) {
+        // Get parameters
+        JSObjectRef objParams = JSValueToObject(context, arguments[0], exception);
+        if (!exception) {
+            // params.visible
+            if (!exception) {
+                JSStringRef strVisible = JSStringCreateWithUTF8CString("visible");
+                const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, strVisible, exception));
+                if(!exception && deniseSetHeaderCallback) {
+                    deniseSetHeaderCallback(visible);
+                }
+                JSStringRelease(strVisible);
+            }
+            // ...
+        }
+        if (!exception) {
+            JSObjectRef _callback = JSValueToObject(context, arguments[1], exception);
+            if (!exception) {
+                if(!JSObjectIsFunction(context, _callback)) {
+                    JSStringRef strError = JSStringCreateWithUTF8CString("TypeError: callback is not a function");
+                    *exception = JSValueMakeString(context, strError);
+                    JSStringRelease(strError);
+                }
+            }
+            if (!exception) {
+                // Assume valid callback function object
+                objCallback = _callback;
+            }
+        }
+    }
+    else {
+        JSStringRef strError = JSStringCreateWithUTF8CString("TypeError: function requires 2 arguments");
+        *exception = JSValueMakeString(context, strError);
+        JSStringRelease(strError);
+    }
+
+    // Fall-through code path for all cases
+    
+    // Check for exception, in which case we call the callback, if it is defined at this point
+    if (exception) {
+        // Assume ERROR_INVALID_PARAMETERS as code for any errors occurring above,
+        // use the string contained inside exception as message.
+        
+        /* function(err) */
+        JSValueRef args[] = { deniseMakeErrorObject(context, Browser::DeniseError::ERROR_INVALID_PARAMETERS, *exception) };
+        JSObjectCallAsFunction(context, objCallback, NULL, 1, args, NULL);
+    }
+    
+    return JSValueMakeUndefined(context);
+}
+
+void deniseBindJS(JSGlobalContextRef context) {
+    JSObjectRef objGlobal = JSContextGetGlobalObject(context);
+    if (objGlobal) {
+        // Create DeniseWrapper object as default JS Object
+        JSObjectRef objDeniseWrapper = JSObjectMake(context, NULL, NULL);
+        // Create function DeniseWrapper.loadProduct
+        {
+            JSStringRef strLoadProduct = JSStringCreateWithUTF8CString("loadProduct");
+            JSObjectSetProperty(context, objDeniseWrapper, strLoadProduct, JSObjectMakeFunctionWithCallback(context, strLoadProduct, deniseJSLoadProduct), kJSPropertyAttributeNone, NULL);
+            JSStringRelease(strLoadProduct);
+        }
+        // Create function DeniseWrapper.setHeader
+        {
+            JSStringRef strSetHeader = JSStringCreateWithUTF8CString("setHeader");
+            JSObjectSetProperty(context, objDeniseWrapper, strSetHeader, JSObjectMakeFunctionWithCallback(context, strSetHeader, deniseJSSetHeader), kJSPropertyAttributeNone, NULL);
+            JSStringRelease(strSetHeader);
+        }
+    }
+    else {
+        // Unable to get JS global context
+        assert(false);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // Browser class
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -255,6 +425,7 @@ public:
     Browser::PaintCallback paintCallback;
     
     // Only valid after initialize()
+    WebKitUserContentManager *userContentManager;
     WebKitWebView *webView;
     GtkWidget *window;
 };
@@ -269,16 +440,14 @@ Browser::~Browser()
 {
     // Reset the paint callback
     webkit_web_view_set_paint_callback(m_private->webView, WebKitWebViewPaintCallback());
-        
-    printf("Browser::~Browser !!!\n");
+    
     // Destroy (GtkWidget)m_private->webView
+    // Destroy m_private->userContentManager?
     // Destroy (GtkWidget)m_private->window
 }
 
 void Browser::initialize(int width, int height)
 {
-    printf("Browser::initialize\n");
-    
     // Perform one-time initialization if necessary (NOT thread-safe)
     if (!g_WebKitData.initialized) {
         g_WebKitData.initialized = true;
@@ -298,32 +467,38 @@ void Browser::initialize(int width, int height)
         webkit_settings_set_enable_developer_extras(g_WebKitData.settings, FALSE);
         webkit_settings_set_enable_webgl(g_WebKitData.settings, FALSE);
         webkit_settings_set_enable_media_stream(g_WebKitData.settings, FALSE);
+        webkit_settings_set_enable_java(g_WebKitData.settings, FALSE);
+        webkit_settings_set_enable_plugins(g_WebKitData.settings, FALSE);
+        webkit_settings_set_javascript_can_open_windows_automatically(g_WebKitData.settings, FALSE);
+        webkit_settings_set_enable_developer_extras(g_WebKitData.settings, FALSE);
+        webkit_settings_set_javascript_can_access_clipboard(g_WebKitData.settings, TRUE);
+        webkit_settings_set_enable_write_console_messages_to_stdout(g_WebKitData.settings, TRUE);
 
         // Faux single process mode for global context
         webkit_web_context_set_process_model(globalContext, WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS);
     }
-    printf("Browser::initialize 1\n");
 
     // Create offscreen window
     GtkWidget *window = gtk_offscreen_window_new();
     m_private->window = window;
     gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
-    printf("Browser::initialize 2\n");
 
-    // Create WebkitWebView with default global context (GtkWidget)
-    WebKitWebView *webView = WEBKIT_WEB_VIEW(webkit_web_view_new());
-    m_private->webView = webView;
-    webkit_web_view_set_settings(webView, g_WebKitData.settings);
-    g_signal_connect(webView, "ready-to-show", G_CALLBACK(webViewReadyToShow), this);
-    printf("Browser::initialize 3\n");
+    // Create WebKitUserContentManager
+    m_private->userContentManager = webkit_user_content_manager_new();
+
+    // Create WebKitWebView with default global context (GtkWidget)
+    m_private->webView = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(m_private->userContentManager));
+    g_assert(webkit_web_view_get_user_content_manager(m_private->webView) == m_private->userContentManager);
+    webkit_web_view_set_settings(m_private->webView, g_WebKitData.settings);
+    g_signal_connect(m_private->webView, "ready-to-show", G_CALLBACK(webViewReadyToShow), this);
     
-    // Set transparent background color -- ACHTUNG doesnt work
-    const GdkRGBA backgroundColor = { 0, 0, 0, 0 };
-    webkit_web_view_set_background_color(webView, &backgroundColor);
+    // Set transparent background color -- ACHTUNG requires WebKit transparency branch
+    //const GdkRGBA backgroundColor = { 0, 0, 0, 0 };
+    //webkit_web_view_set_background_color(m_private->webView, &backgroundColor);
 
     // Set paint callback
     using namespace std::placeholders;
-    webkit_web_view_set_paint_callback(webView, [=](uint8_t *data, float scaling, const GdkPoint &dstPoint, const GdkRectangle &srcSize, const GdkRectangle &srcRect)->void {
+    webkit_web_view_set_paint_callback(m_private->webView, [=](uint8_t *data, float scaling, const GdkPoint &dstPoint, const GdkRectangle &srcSize, const GdkRectangle &srcRect)->void {
         // Callback
         if(m_private->paintCallback) {
             const Point dstPoint_ = { (unsigned int)dstPoint.x, (unsigned int)dstPoint.y };
@@ -332,17 +507,18 @@ void Browser::initialize(int width, int height)
             m_private->paintCallback(data, dstPoint_ ,srcSize_, srcRect_);
         }
     });
-    printf("Browser::initialize 4\n");
     
-    // ACHTUNG
-    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(webView));
+    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(m_private->webView));
 
     // Show (and implicitly realize) entire widget tree
     // NOTE: This call may crash due to a bug in gtk+3 on OS X, see https://bugzilla.gnome.org/show_bug.cgi?id=667721
     gtk_widget_show_all(window);
+    
+    /// DENISE BEGIN
+    deniseBindJS(webkit_web_view_get_javascript_global_context(m_private->webView));
+    /// DENISE END
 
     m_private->initialized = true;
-    printf("Browser::initialize done\n");
 }
 
 void Browser::tick()
@@ -353,7 +529,6 @@ void Browser::tick()
     assert(tid == g_WebKitData.tid);
     
     // ACHTUNG check if necessary
-    // THREADCHECK
     gtk_main_iteration_do(FALSE);
 }
 
@@ -366,7 +541,6 @@ void Browser::setSize(int width, int height)
 {
     assert(isInitialized());
     
-    printf("Browser::setSize\n");
     gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
 }
 

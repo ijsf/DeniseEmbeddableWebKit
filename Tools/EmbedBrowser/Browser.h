@@ -103,6 +103,16 @@ namespace WebKitEmbed
     typedef std::function<void(uint8_t *, const Point&, const Rect&, const Rect&)> PaintCallback;
     void setPaintCallback(PaintCallback fn);
     
+    /// DENISE BEGIN
+    enum DeniseError {
+        ERROR_NONE = 0,
+        ERROR_INVALID_PARAMETERS
+    };
+    
+    typedef std::function<void(bool)> SetHeaderCallback;
+    void deniseSetCallbackSetHeader(SetHeaderCallback fn);
+    /// DENISE END
+    
   private:
     std::unique_ptr<class BrowserPrivate> m_private;
   };
