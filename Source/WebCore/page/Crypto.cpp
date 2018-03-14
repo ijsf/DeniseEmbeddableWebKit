@@ -61,8 +61,8 @@ ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
     if (array.byteLength() > 65536)
         return Exception { QuotaExceededError };
 #if OS(DARWIN)
-    int rc = CCRandomCopyBytes(kCCRandomDefault, array.baseAddress(), array.byteLength());
-    RELEASE_ASSERT(rc == kCCSuccess);
+    //int rc = CCRandomCopyBytes(kCCRandomDefault, array.baseAddress(), array.byteLength());
+    //RELEASE_ASSERT(rc == kCCSuccess);
 #else
     cryptographicallyRandomValues(array.baseAddress(), array.byteLength());
 #endif
