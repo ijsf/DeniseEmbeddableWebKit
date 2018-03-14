@@ -22,7 +22,7 @@ Installing `icu4c` using Homebrew is currently not possible, so this has to be d
 Download the latest `icu4c` from http://site.icu-project.org/download/60#TOC-ICU4C-Download and extract.
 
 	cd source
-	./configure --enable-static
+	./configure
 	make install
 
 ### gettext
@@ -92,7 +92,6 @@ In the editor, add the following patch on the first level:
 Add the following configure arguments for static linking and to disable unnecessary features:
 
     --disable-doc-cross-references --disable-cloudprint --disable-modules --disable-papi --disable-cups
-    --enable-static=yes
 
 Save and close, and make sure to rebuild the `gtk+3` package:
 
