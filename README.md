@@ -22,7 +22,7 @@ Installing `icu4c` using Homebrew is currently not possible, so this has to be d
 Download the latest `icu4c` from http://site.icu-project.org/download/60#TOC-ICU4C-Download and extract.
 
 	cd source
-	./configure
+	./configure --enable-static
 	make install
 
 ### gettext
