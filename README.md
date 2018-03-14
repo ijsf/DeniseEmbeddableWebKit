@@ -89,6 +89,11 @@ In the editor, add the following patch on the first level:
 	EOS
 ```
 
+Add the following configure arguments for static linking and to disable unnecessary features:
+
+    --disable-doc-cross-references --disable-cloudprint --disable-modules --disable-papi --disable-cups
+    --enable-static=yes
+
 Save and close, and make sure to rebuild the `gtk+3` package:
 
 	brew reinstall --build-from-source gtk+3
