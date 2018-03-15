@@ -15,6 +15,14 @@ Building WebKitGtk on OS X requires a number of prerequisities and some bug patc
 
 ## Prerequisities
 
+### XCode
+
+The XCode command line utilities _must_ be installed. Not doing this will lead to very obscure errors due to the `/usr/local/include` header path and `/usr/local/lib` library path not being found.
+
+Make sure the following has been executed on the build system:
+
+    xcode-select --install
+
 ### icu
 
 Installing `icu4c` using Homebrew is currently not possible, so this has to be done manually. 
