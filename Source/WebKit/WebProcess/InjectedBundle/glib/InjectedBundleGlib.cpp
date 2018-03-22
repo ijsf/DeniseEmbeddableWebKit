@@ -34,23 +34,21 @@
 
 using namespace WebCore;
 
+// WKBundleInitialize forward declaration for static linking
+// as copied from API/glib/WebKitInjectedBundleMain.cpp
+#if defined(WIN32) || defined(_WIN32)
+extern "C" __declspec(dllexport)
+#else
+extern "C"
+#endif
+void WKBundleInitialize(WKBundleRef bundle, WKTypeRef userData);
+
 namespace WebKit {
 
 bool InjectedBundle::initialize(const WebProcessCreationParameters&, API::Object* initializationUserData)
 {
-    m_platformBundle = g_module_open(fileSystemRepresentation(m_path).data(), G_MODULE_BIND_LOCAL);
-    if (!m_platformBundle) {
-        g_warning("Error loading the injected bundle (%s): %s", m_path.utf8().data(), g_module_error());
-        return false;
-    }
-
-    WKBundleInitializeFunctionPtr initializeFunction = 0;
-    if (!g_module_symbol(m_platformBundle, "WKBundleInitialize", reinterpret_cast<void**>(&initializeFunction)) || !initializeFunction) {
-        g_warning("Error loading WKBundleInitialize symbol from injected bundle.");
-        return false;
-    }
-
-    initializeFunction(toAPI(this), toAPI(initializationUserData));
+    // webkit2gtkinjectedbundle is linked in statically in this port, so any dynamic loading is avoided here
+    WKBundleInitialize(toAPI(this), toAPI(initializationUserData));
     return true;
 }
 

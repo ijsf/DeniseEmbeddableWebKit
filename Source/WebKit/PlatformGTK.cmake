@@ -241,6 +241,8 @@ list(APPEND WebKit2_SOURCES
 
     WebProcess/Cookies/soup/WebCookieManagerSoup.cpp
 
+    WebProcess/InjectedBundle/API/glib/WebKitInjectedBundleMain.cpp
+    
     WebProcess/InjectedBundle/API/glib/WebKitConsoleMessage.cpp
     WebProcess/InjectedBundle/API/glib/WebKitExtensionManager.cpp
     WebProcess/InjectedBundle/API/glib/WebKitFrame.cpp
@@ -1091,22 +1093,6 @@ include_directories(
     "${FORWARDING_HEADERS_WEBKIT2GTK_DIR}"
 )
 
-add_library(webkit2gtkinjectedbundle MODULE "${WEBKIT2_DIR}/WebProcess/InjectedBundle/API/glib/WebKitInjectedBundleMain.cpp")
-add_webkit2_prefix_header(webkit2gtkinjectedbundle)
-target_link_libraries(webkit2gtkinjectedbundle WebKit2)
-target_include_directories(webkit2gtkinjectedbundle PRIVATE
-    "${WEBCORE_DIR}/platform/network/soup"
-    "${WEBCORE_DIR}/platform/network"
-    "${WEBCORE_DIR}/platform"
-    "${FORWARDING_HEADERS_DIR}/WebCore"
-    "${FORWARDING_HEADERS_DIR}/WebKit"
-    "${DERIVED_SOURCES_DIR}/WebCore"
-)
-
-if (COMPILER_IS_GCC_OR_CLANG)
-    WEBKIT_ADD_TARGET_CXX_FLAGS(webkit2gtkinjectedbundle -Wno-unused-parameter)
-endif ()
-
 # Add ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} to LD_LIBRARY_PATH or DYLD_LIBRARY_PATH
 if (APPLE)
     set(LOADER_LIBRARY_PATH_VAR "DYLD_LIBRARY_PATH")
@@ -1247,9 +1233,6 @@ add_custom_command(
 ADD_TYPELIB(${CMAKE_BINARY_DIR}/WebKit2-${WEBKITGTK_API_VERSION}.typelib)
 ADD_TYPELIB(${CMAKE_BINARY_DIR}/WebKit2WebExtension-${WEBKITGTK_API_VERSION}.typelib)
 
-install(TARGETS webkit2gtkinjectedbundle
-        DESTINATION "${LIB_INSTALL_DIR}/webkit2gtk-${WEBKITGTK_API_VERSION}/injected-bundle"
-)
 install(FILES "${CMAKE_BINARY_DIR}/Source/WebKit/webkit2gtk-${WEBKITGTK_API_VERSION}.pc"
               "${CMAKE_BINARY_DIR}/Source/WebKit/webkit2gtk-web-extension-${WEBKITGTK_API_VERSION}.pc"
         DESTINATION "${LIB_INSTALL_DIR}/pkgconfig"
