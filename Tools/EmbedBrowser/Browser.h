@@ -4,6 +4,53 @@
 #include <string>
 #include <functional>
 
+/// DENISE BEGIN
+namespace Denise
+{
+    namespace Internal
+    {
+        /**
+        * Wrapper
+        *
+        * Interface class for calls to the Wrapper.
+        */
+        class Wrapper {
+        public:
+            enum PluginType {
+                VST = 0,
+                VST3 = 1,
+                AU = 2
+            };
+   
+            struct ProductPayload {
+                std::string id;
+                PluginType productType;
+                std::string productFilePath;
+            };
+       
+            virtual void loadProduct(const ProductPayload& payload) = 0;
+            virtual void setHeader(const bool visible) = 0;
+   
+        protected:
+            virtual ~Wrapper() {};
+        };
+
+        /**
+        * Store
+        *
+        * Interface class for calls to the Store.
+        */
+        class Store {
+        public:
+            virtual bool setStore(const bool visible) = 0;
+   
+        protected:
+            virtual ~Store() {};
+        };
+    }
+}
+/// DENISE END
+
 namespace WebKitEmbed
 {
   class Browser
@@ -105,13 +152,7 @@ namespace WebKitEmbed
     void setPaintCallback(PaintCallback fn);
     
     /// DENISE BEGIN
-    enum DeniseError {
-        ERROR_NONE = 0,
-        ERROR_INVALID_PARAMETERS
-    };
-    
-    typedef std::function<void(bool)> SetHeaderCallback;
-    void deniseSetCallbackSetHeader(SetHeaderCallback fn);
+    void deniseSetWrapperInterface(std::shared_ptr<Denise::Internal::Wrapper>& interface);
     /// DENISE END
     
   private:

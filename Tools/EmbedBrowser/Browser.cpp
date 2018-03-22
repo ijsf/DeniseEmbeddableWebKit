@@ -286,6 +286,10 @@ public:
     WebKitUserContentManager *userContentManager;
     WebKitWebView *webView;
     GtkWidget *window;
+    
+    /// DENISE BEGIN
+    std::shared_ptr<Denise::Internal::Wrapper> m_deniseInterfaceWrapper;
+    /// DENISE END
 };
 
 Browser::Browser()
@@ -451,6 +455,16 @@ void Browser::loadURL(const std::string &url)
 void Browser::setPaintCallback(PaintCallback fn)
 {
     m_private->paintCallback = fn;
+}
+
+// ACHTUNG: Static hack to get the Denise::Internal interfaces to Extension.cpp,
+// as there is currently no easy way to get to the Browser instance in which these interfaces are stored as member vars.
+#include "Extension.h"
+std::shared_ptr<Denise::Internal::Wrapper> g_deniseInterfaceWrapper;
+    
+void Browser::deniseSetWrapperInterface(std::shared_ptr<Denise::Internal::Wrapper>& interface)
+{
+    m_private->m_deniseInterfaceWrapper = g_deniseInterfaceWrapper = interface;
 }
 
 }

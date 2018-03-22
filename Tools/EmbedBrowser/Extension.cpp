@@ -12,8 +12,10 @@ namespace WebKitEmbed
 // Denise specific code
 ///////////////////////////////////////////////////////////////////////////////
 
-// We use static functions for now for convenience, but a better option would be to define all of this inside the Browser class
-Browser::SetHeaderCallback deniseSetHeaderCallback;
+enum DeniseError {
+    ERROR_NONE = 0,
+    ERROR_INVALID_PARAMETERS
+};
 
 /*
     interface ErrorObject {
@@ -21,7 +23,7 @@ Browser::SetHeaderCallback deniseSetHeaderCallback;
       string message
     }
 */
-JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseError error, const std::string message) {
+JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error, const std::string message) {
     JSObjectRef obj = JSObjectMake(context, nullptr, nullptr);
 
     JSStringRef strCode = JSStringCreateWithUTF8CString("code");
@@ -37,7 +39,7 @@ JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseErr
     return obj;
 }
 
-JSObjectRef deniseMakeErrorObject(JSContextRef context, const Browser::DeniseError error, const JSValueRef message) {
+JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error, const JSValueRef message) {
     JSObjectRef obj = JSObjectMake(context, nullptr, nullptr);
 
     JSStringRef strCode = JSStringCreateWithUTF8CString("code");
@@ -100,8 +102,8 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
                 {
                     JSStringRef strVisible = JSStringCreateWithUTF8CString("visible");
                     const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, strVisible, exception));
-                    if(!*exception && deniseSetHeaderCallback) {
-                        deniseSetHeaderCallback(visible);
+                    if(!*exception && g_deniseInterfaceWrapper) {
+                        g_deniseInterfaceWrapper->setHeader(visible);
                     }
                     JSStringRelease(strVisible);
                 }
@@ -123,7 +125,7 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
         // use the string contained inside exception as message.
         
         /* function(err) */
-        JSValueRef args[] = { deniseMakeErrorObject(context, Browser::DeniseError::ERROR_INVALID_PARAMETERS, *exception) };
+        JSValueRef args[] = { deniseMakeErrorObject(context, DeniseError::ERROR_INVALID_PARAMETERS, *exception) };
         JSObjectCallAsFunction(context, objCallback, nullptr, 1, args, nullptr);
     }
     
