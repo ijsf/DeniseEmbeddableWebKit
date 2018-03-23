@@ -53,13 +53,102 @@ JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error,
     return obj;
 }
 
+std::string JSStringToStdString(JSStringRef jsString) {
+    size_t nMaxSize = JSStringGetMaximumUTF8CStringSize(jsString);
+    char* buf = new char[nMaxSize];
+    size_t nSize = JSStringGetUTF8CString(jsString, buf, nMaxSize);
+    std::string str = std::string (buf, nSize - 1);
+    delete [] buf;
+    return str;
+}
+
 JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
     
     /* DeniseWrapper.loadProduct(payload: ProductPayload, callback: function(err: ErrorCode)) */
     if (argumentCount == 2) {
-        // STUB
+        // Get parameters
+        JSObjectRef objPayload = JSValueToObject(context, arguments[0], exception);
+        if (!*exception) {
+            Denise::Internal::Wrapper::ProductPayload productPayload;
+            bool valid = true;
+            // productPayload.id
+            if (valid) {
+                JSStringRef jsstrKey = JSStringCreateWithUTF8CString("id");
+                JSValueRef jsValueRef = JSObjectGetProperty(context, objPayload, jsstrKey, exception);
+                if (!*exception && JSValueIsString(context, jsValueRef)) {
+                    JSStringRef jsstrValue = JSValueToStringCopy(context, jsValueRef, exception);
+                    if (!*exception && jsstrValue) {
+                        productPayload.id = JSStringToStdString(jsstrValue);
+                    }
+                    else {
+                        valid = false;
+                    }
+                    JSStringRelease(jsstrValue);
+                }
+                else {
+                    valid = false;
+                }
+                if (!valid) {
+                    JSStringRef message = JSStringCreateWithUTF8CString("TypeError: productPayload.id not a string");
+                    *exception = JSValueMakeString(context, message);
+                    JSStringRelease(message);
+                }
+                JSStringRelease(jsstrKey);
+            }
+            // productPayload.type
+            if (valid) {
+                JSStringRef jsstrKey = JSStringCreateWithUTF8CString("type");
+                JSValueRef jsValueRef = JSObjectGetProperty(context, objPayload, jsstrKey, exception);
+                if (!*exception && JSValueIsNumber(context, jsValueRef)) {
+                    int value = JSValueToNumber(context, jsValueRef, exception);
+                    if (!*exception) {
+                        productPayload.type = (Denise::Internal::Wrapper::PluginType)value;
+                    }
+                    else {
+                        valid = false;
+                    }
+                }
+                else {
+                    valid = false;
+                }
+                if (!valid) {
+                    JSStringRef message = JSStringCreateWithUTF8CString("TypeError: productPayload.type not a number");
+                    *exception = JSValueMakeString(context, message);
+                    JSStringRelease(message);
+                }
+                JSStringRelease(jsstrKey);
+            }
+            // productPayload.loadData
+            if (valid) {
+                JSStringRef jsstrKey = JSStringCreateWithUTF8CString("loadData");
+                JSValueRef jsValueRef = JSObjectGetProperty(context, objPayload, jsstrKey, exception);
+                if (!*exception && JSValueIsString(context, jsValueRef)) {
+                    JSStringRef jsstrValue = JSValueToStringCopy(context, jsValueRef, exception);
+                    if (!*exception && jsstrValue) {
+                        productPayload.loadData = JSStringToStdString(jsstrValue);
+                    }
+                    else {
+                        valid = false;
+                    }
+                    JSStringRelease(jsstrValue);
+                }
+                else {
+                    valid = false;
+                }
+                if (!valid) {
+                    JSStringRef message = JSStringCreateWithUTF8CString("TypeError: productPayload.loadData not a string");
+                    *exception = JSValueMakeString(context, message);
+                    JSStringRelease(message);
+                }
+                JSStringRelease(jsstrKey);
+            }
+            // Callback if parameters were valid
+            if (valid && g_deniseInterfaceWrapper) {
+                g_deniseInterfaceWrapper->loadProduct(productPayload);
+            }
+        }
     }
     else {
         JSStringRef message = JSStringCreateWithUTF8CString("TypeError: function requires 2 arguments");
@@ -100,14 +189,13 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
             if (!*exception) {
                 // params.visible
                 {
-                    JSStringRef strVisible = JSStringCreateWithUTF8CString("visible");
-                    const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, strVisible, exception));
+                    JSStringRef jsstrVisible = JSStringCreateWithUTF8CString("visible");
+                    const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, jsstrVisible, exception));
                     if(!*exception && g_deniseInterfaceWrapper) {
                         g_deniseInterfaceWrapper->setHeader(visible);
                     }
-                    JSStringRelease(strVisible);
+                    JSStringRelease(jsstrVisible);
                 }
-                // ...
             }
         }
     }

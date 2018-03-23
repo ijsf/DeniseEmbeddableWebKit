@@ -17,18 +17,18 @@ namespace Denise
         class Wrapper {
         public:
             enum PluginType {
-                VST = 0,
-                VST3 = 1,
-                AU = 2
+                PLUGIN_VST = 0,
+                PLUGIN_VST3 = 1,
+                PLUGIN_AU = 2
             };
    
             struct ProductPayload {
                 std::string id;
-                PluginType productType;
-                std::string productFilePath;
+                PluginType type;
+                std::string loadData;
             };
        
-            virtual void loadProduct(const ProductPayload& payload) = 0;
+            virtual void loadProduct(const ProductPayload payload) = 0;
             virtual void setHeader(const bool visible) = 0;
    
         protected:
@@ -152,7 +152,7 @@ namespace WebKitEmbed
     void setPaintCallback(PaintCallback fn);
     
     /// DENISE BEGIN
-    void deniseSetWrapperInterface(std::shared_ptr<Denise::Internal::Wrapper>& interface);
+    void deniseSetWrapperInterface(Denise::Internal::Wrapper* interface);
     /// DENISE END
     
   private:
