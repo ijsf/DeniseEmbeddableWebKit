@@ -26,6 +26,7 @@
 
 #include <glib-object.h>
 #include <webkit2/WebKitDefines.h>
+#include <functional>
 
 G_BEGIN_DECLS
 
@@ -58,11 +59,8 @@ struct _WebKitScriptWorldClass {
 WEBKIT_API GType
 webkit_script_world_get_type    (void);
 
-WEBKIT_API WebKitScriptWorld *
-webkit_script_world_get_default (void);
-
-WEBKIT_API WebKitScriptWorld *
-webkit_script_world_new         (void);
+WEBKIT_API void
+webkit_script_world_set_create_callback (std::function<void(WebKitScriptWorld *)> callback);
 
 G_END_DECLS
 

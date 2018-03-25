@@ -83,20 +83,25 @@ static void webkit_script_world_class_init(WebKitScriptWorldClass* klass)
         WEBKIT_TYPE_FRAME);
 }
 
-WebKitScriptWorld* webkitScriptWorldGet(InjectedBundleScriptWorld* scriptWorld)
-{
-    return scriptWorlds().get(scriptWorld);
-}
+/**
+ * Mechanism to replace thread unsafe webkit_script_world_get_default and webkit_script_world_new.
+ *
+ * Using the original functions will cause a serious threading issue because webkit_script_world_get_default
+ * would immediately create a JS context (including VM, run loop, etc.) in the calling thread,
+ * while this should be left for the thread that is creating the webpage.
+ *
+ * Since webkit_script_world_get_default is normally called from the main thread (or any other unrelated thread),
+ * this will cause potential deadlocks as the main thread will now be owning and taking care of a JS run loop
+ * and its associated locking behaviour.
+ *
+ * As webkitScriptWorldGet (and subsequently webkitScriptWorldWindowObjectCleared) is called by the proper web page thread,
+ * we just mimic the g_once behaviour of webkit_script_world_get_default and use a callback.
+ *
+ * NOTE: webkit_script_world_set_create_callback should only be called once.
+ */
 
-InjectedBundleScriptWorld* webkitScriptWorldGetInjectedBundleScriptWorld(WebKitScriptWorld* world)
-{
-    return world->priv->scriptWorld.get();
-}
-
-void webkitScriptWorldWindowObjectCleared(WebKitScriptWorld* world, WebKitWebPage* page, WebKitFrame* frame)
-{
-    g_signal_emit(world, signals[WINDOW_OBJECT_CLEARED], 0, page, frame);
-}
+static std::function<void(WebKitScriptWorld *)> scriptWorldCreateCallback;
+static std::atomic<int> scriptWorldCreated(0);
 
 static WebKitScriptWorld* webkitScriptWorldCreate(Ref<InjectedBundleScriptWorld>&& scriptWorld)
 {
@@ -109,43 +114,31 @@ static WebKitScriptWorld* webkitScriptWorldCreate(Ref<InjectedBundleScriptWorld>
     return world;
 }
 
-static gpointer createDefaultScriptWorld(gpointer)
+void webkit_script_world_set_create_callback(std::function<void(WebKitScriptWorld *)> callback)
 {
-    return webkitScriptWorldCreate(InjectedBundleScriptWorld::normalWorld());
+    scriptWorldCreateCallback = callback;
 }
 
-/**
- * webkit_script_world_get_default:
- *
- * Get the default #WebKitScriptWorld. This is the normal script world
- * where all scripts are executed by default.
- * You can get the JavaScript execution context of a #WebKitScriptWorld
- * for a given #WebKitFrame with webkit_frame_get_javascript_context_for_script_world().
- *
- * Returns: (transfer none): the default #WebKitScriptWorld
- *
- * Since: 2.2
- */
-WebKitScriptWorld* webkit_script_world_get_default(void)
+WebKitScriptWorld* webkitScriptWorldGet(InjectedBundleScriptWorld* scriptWorld)
 {
-    static GOnce onceInit = G_ONCE_INIT;
-    return WEBKIT_SCRIPT_WORLD(g_once(&onceInit, createDefaultScriptWorld, 0));
+    // Mimic'ed behaviour: if this is the first time this function is called, assume a scriptWorld was just created
+    if (scriptWorldCreated.fetch_or(1) == 0) {
+        // First time called, so create default script world
+        webkitScriptWorldCreate(InjectedBundleScriptWorld::normalWorld());
+        
+        // Call the relevant callback
+        scriptWorldCreateCallback(scriptWorlds().get(scriptWorld));
+    }
+    
+    return scriptWorlds().get(scriptWorld);
 }
 
-/**
- * webkit_script_world_new:
- *
- * Creates a new isolated #WebKitScriptWorld. Scripts executed in
- * isolated worlds have access to the DOM but not to other variable
- * or functions created by the page.
- * You can get the JavaScript execution context of a #WebKitScriptWorld
- * for a given #WebKitFrame with webkit_frame_get_javascript_context_for_script_world().
- *
- * Returns: (transfer full): a new isolated #WebKitScriptWorld
- *
- * Since: 2.2
- */
-WebKitScriptWorld* webkit_script_world_new(void)
+InjectedBundleScriptWorld* webkitScriptWorldGetInjectedBundleScriptWorld(WebKitScriptWorld* world)
 {
-    return webkitScriptWorldCreate(InjectedBundleScriptWorld::create());
+    return world->priv->scriptWorld.get();
+}
+
+void webkitScriptWorldWindowObjectCleared(WebKitScriptWorld* world, WebKitWebPage* page, WebKitFrame* frame)
+{
+    g_signal_emit(world, signals[WINDOW_OBJECT_CLEARED], 0, page, frame);
 }

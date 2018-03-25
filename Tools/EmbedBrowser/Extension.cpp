@@ -23,6 +23,7 @@ enum DeniseError {
       string message
     }
 */
+// THREAD-BROWSER
 JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error, const std::string message) {
     JSObjectRef obj = JSObjectMake(context, nullptr, nullptr);
 
@@ -39,6 +40,7 @@ JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error,
     return obj;
 }
 
+// THREAD-BROWSER
 JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error, const JSValueRef message) {
     JSObjectRef obj = JSObjectMake(context, nullptr, nullptr);
 
@@ -53,6 +55,7 @@ JSObjectRef deniseMakeErrorObject(JSContextRef context, const DeniseError error,
     return obj;
 }
 
+// THREAD-BROWSER
 std::string JSStringToStdString(JSStringRef jsString) {
     size_t nMaxSize = JSStringGetMaximumUTF8CStringSize(jsString);
     char* buf = new char[nMaxSize];
@@ -62,6 +65,7 @@ std::string JSStringToStdString(JSStringRef jsString) {
     return str;
 }
 
+// THREAD-BROWSER
 JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
@@ -159,6 +163,7 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
     return JSValueMakeUndefined(context);
 }
 
+// THREAD-BROWSER
 JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
@@ -220,6 +225,7 @@ JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObject
     return JSValueMakeUndefined(context);
 }
 
+// THREAD-BROWSER
 void deniseBindJS(JSGlobalContextRef context) {
     JSObjectRef objGlobal = JSContextGetGlobalObject(context);
     if (objGlobal) {
@@ -250,12 +256,17 @@ void deniseBindJS(JSGlobalContextRef context) {
     }
 }
 
+// THREAD-BROWSER
 void webViewWindowObjectCleared(WebKitScriptWorld *world, WebKitWebPage *page, WebKitFrame *frame, Browser *browser) {
     deniseBindJS(webkit_frame_get_javascript_context_for_script_world(frame, world));
 }
 
-extern void registerWebExtension(Browser *browser) {
-    g_signal_connect(webkit_script_world_get_default(), "window-object-cleared", G_CALLBACK(webViewWindowObjectCleared), browser);
+// THREAD-UI
+extern void registerWebExtension(Browser* browser) {
+    webkit_script_world_set_create_callback([browser](WebKitScriptWorld* world)->void {
+        // THREAD-BROWSER
+        g_signal_connect(world, "window-object-cleared", G_CALLBACK(webViewWindowObjectCleared), browser);
+    });
 }
 
 };
