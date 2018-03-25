@@ -401,9 +401,16 @@ bool Browser::isInitialized() const
 
 void Browser::setSize(int width, int height)
 {
+    printf("Browser::setSize(%u, %u)\n", width, height);
     assert(isInitialized());
     
-    gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
+    // Size the window, though this appears to be in vain
+    //gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
+    //gtk_window_resize(GTK_WINDOW(m_private->window), width, height);
+
+    // Performing a size_allocate on the webView widget seems to trigger the right callback(s)
+    GtkAllocation alloc = { 0, 0, width, height };
+    gtk_widget_size_allocate(GTK_WIDGET(m_private->webView), &alloc);
 }
 
 void Browser::mouseMove(int x, int y, ModifierKeys modifier)
