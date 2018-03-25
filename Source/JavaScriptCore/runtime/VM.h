@@ -258,8 +258,6 @@ public:
 
     bool isSharedInstance() { return vmType == APIShared; }
     bool usingAPI() { return vmType != Default; }
-    JS_EXPORT_PRIVATE static bool sharedInstanceExists();
-    JS_EXPORT_PRIVATE static VM& sharedInstance();
 
     JS_EXPORT_PRIVATE static Ref<VM> create(HeapType = SmallHeap);
     JS_EXPORT_PRIVATE static Ref<VM> createLeaked(HeapType = SmallHeap);
@@ -699,7 +697,6 @@ private:
     friend class LLIntOffsetsExtractor;
 
     VM(VMType, HeapType);
-    static VM*& sharedInstanceInternal();
     void createNativeThunk();
 
     void updateStackLimits();

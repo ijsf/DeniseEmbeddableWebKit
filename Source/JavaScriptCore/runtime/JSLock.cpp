@@ -35,18 +35,6 @@
 
 namespace JSC {
 
-StaticLock GlobalJSLock::s_sharedInstanceMutex;
-
-GlobalJSLock::GlobalJSLock()
-{
-    s_sharedInstanceMutex.lock();
-}
-
-GlobalJSLock::~GlobalJSLock()
-{
-    s_sharedInstanceMutex.unlock();
-}
-
 JSLockHolder::JSLockHolder(ExecState* exec)
     : m_vm(&exec->vm())
 {

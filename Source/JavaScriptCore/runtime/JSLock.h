@@ -52,17 +52,6 @@ namespace JSC {
 class ExecState;
 class VM;
 
-// This class is used to protect the initialization of the legacy single 
-// shared VM.
-class GlobalJSLock {
-    WTF_MAKE_NONCOPYABLE(GlobalJSLock);
-public:
-    JS_EXPORT_PRIVATE GlobalJSLock();
-    JS_EXPORT_PRIVATE ~GlobalJSLock();
-private:
-    static StaticLock s_sharedInstanceMutex;
-};
-
 class JSLockHolder {
 public:
     JS_EXPORT_PRIVATE JSLockHolder(VM*);

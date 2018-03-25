@@ -461,26 +461,6 @@ Ref<VM> VM::createLeaked(HeapType heapType)
     return create(heapType);
 }
 
-bool VM::sharedInstanceExists()
-{
-    return sharedInstanceInternal();
-}
-
-VM& VM::sharedInstance()
-{
-    GlobalJSLock globalLock;
-    VM*& instance = sharedInstanceInternal();
-    if (!instance)
-        instance = adoptRef(new VM(APIShared, SmallHeap)).leakRef();
-    return *instance;
-}
-
-VM*& VM::sharedInstanceInternal()
-{
-    static VM* sharedInstance;
-    return sharedInstance;
-}
-
 Watchdog& VM::ensureWatchdog()
 {
     if (!m_watchdog)
