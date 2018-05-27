@@ -27,11 +27,17 @@ Make sure the following has been executed on the build system:
 
 Installing `icu4c` using Homebrew is currently not possible, so this has to be done manually. 
 
-Download the latest `icu4c` from http://site.icu-project.org/download/60#TOC-ICU4C-Download and extract.
+Download the latest `icu4c` Linux source archive from http://site.icu-project.org/download/61#TOC-ICU4C-Download and extract.
 
 	cd source
 	./configure
 	make install
+
+### libsoup
+
+Install:
+
+    brew install libsoup
 
 ### gettext
 
