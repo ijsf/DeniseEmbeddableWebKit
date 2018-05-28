@@ -51,6 +51,29 @@ In case you run into compilation problems with `-lintl` in webgtk, symlink `libi
 
 	ln -s /usr/local/opt/gettext/lib/libintl.a /usr/local/lib
 
+### glib-networking
+
+Unfortunately, glib-networking through Homebrew does not normally contain static modules and relies on a dynamic loading system that we do not want to use.
+We thus have to patch the Homebrew formula:
+
+```
+	HOMEBREW_EDITOR=nano brew edit glib-networking
+```
+
+Add the following configure arguments for static linking:
+
+```
+                      "-Dstatic_modules=true",
+```
+
+Save and close, and make sure to rebuild the package:
+
+```
+	brew reinstall --build-from-source glib-networking
+```
+
+The static libraries are expected to be available at `/usr/local/lib/gio/modules`.
+
 ### gtk+3
 
 Unfortunately, gtk+3 contains critical bugs related to offscreen windows that need to be patched manually.
@@ -105,9 +128,9 @@ In the editor, add the following patch on the first level:
 
 Add the following configure arguments for static linking and to disable unnecessary features:
 
-    --disable-doc-cross-references --disable-cloudprint --disable-modules --disable-papi --disable-cups
+    --disable-doc-cross-references --disable-cloudprint --disable-papi --disable-cups
 
-Save and close, and make sure to rebuild the `gtk+3` package:
+Save and close, and make sure to rebuild the package:
 
 	brew reinstall --build-from-source gtk+3
 

@@ -38,6 +38,9 @@ set(EmbedBrowser_LIBRARIES
     ${GTK3_LIBRARIES}
     ${GLIB_LIBRARIES}
     ${LIBSOUP_LIBRARIES}
+    gnutls
+    /usr/local/lib/gio/modules/libgiognomeproxy.a
+    /usr/local/lib/gio/modules/libgiognutls.a
 #    ${OSX_COREFOUNDATION}
     ${OSX_ICONV}
 )

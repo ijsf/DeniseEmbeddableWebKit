@@ -43,6 +43,9 @@ set(MiniBrowser_LIBRARIES
     WebKit2
     ${GTK3_LIBRARIES}
     ${GLIB_LIBRARIES}
+    gnutls
+    /usr/local/lib/gio/modules/libgiognomeproxy.a
+    /usr/local/lib/gio/modules/libgiognutls.a
     ${LIBSOUP_LIBRARIES}
     ${OSX_COREFOUNDATION}
     ${OSX_ICONV}

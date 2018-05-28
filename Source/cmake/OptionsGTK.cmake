@@ -197,7 +197,7 @@ set(GDK_INCLUDE_DIRS ${GDK3_INCLUDE_DIRS})
 SET_AND_EXPOSE_TO_BUILD(HAVE_GTK_GESTURES ${GTK3_SUPPORTS_GESTURES})
 SET_AND_EXPOSE_TO_BUILD(HAVE_GTK_UNIX_PRINTING ${GTKUnixPrint_FOUND})
 
-set(glib_components gio gio-unix gobject gthread gmodule)
+set(glib_components gobject gthread gmodule)
 find_package(GLIB 2.36 REQUIRED COMPONENTS ${glib_components})
 
 if (ENABLE_XSLT)

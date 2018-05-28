@@ -9,6 +9,11 @@
 
 #define UNUSED_PARAM(variable) (void)variable
 
+G_BEGIN_DECLS \
+    void g_io_gnomeproxy_load(GIOModule *module);
+    void g_io_gnutls_load(GIOModule *module);
+G_END_DECLS
+
 namespace WebKitEmbed
 {
 
@@ -315,7 +320,17 @@ void Browser::initialize(int width, int height)
         g_WebKitData.initialized = true;
 
         gtk_init(nullptr, nullptr);   // THREADCHECK
-        
+
+        printf("GIOModule register\n");
+        {
+            GIOModule* module = (GIOModule*)g_object_new(G_IO_TYPE_MODULE, NULL);
+            g_io_gnomeproxy_load(NULL);
+        }
+        {
+            GIOModule* module = (GIOModule*)g_object_new(G_IO_TYPE_MODULE, NULL);
+            g_io_gnutls_load(NULL);
+        }
+
         // Make sure the default im module imquartz is not used on OS X, as this will cause a crash with GtkOffscreenWindow
         g_object_set(gtk_settings_get_default(), "gtk-im-module", "gtk-im-context-simple", nullptr);
 
