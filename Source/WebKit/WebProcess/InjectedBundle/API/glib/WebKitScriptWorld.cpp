@@ -126,8 +126,10 @@ WebKitScriptWorld* webkitScriptWorldGet(InjectedBundleScriptWorld* scriptWorld)
         // First time called, so create default script world
         webkitScriptWorldCreate(InjectedBundleScriptWorld::normalWorld());
         
-        // Call the relevant callback
-        scriptWorldCreateCallback(scriptWorlds().get(scriptWorld));
+        if (scriptWorldCreateCallback) {
+            // Call the relevant callback
+            scriptWorldCreateCallback(scriptWorlds().get(scriptWorld));
+        }
     }
     
     return scriptWorlds().get(scriptWorld);
