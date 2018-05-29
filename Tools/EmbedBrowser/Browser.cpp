@@ -250,6 +250,21 @@ static void doMotionEvent(GtkWidget* widget, int x, int y, guint state)
     //g_free(event);
 }
 
+static void doFocusInEvent(GtkWidget* widget)
+{
+    GdkEvent* fevent = gdk_event_new(GDK_FOCUS_CHANGE);
+    fevent->focus_change.type = GDK_FOCUS_CHANGE;
+    fevent->focus_change.in = TRUE;
+    fevent->focus_change.window = gtk_widget_get_window(widget);
+    if (fevent->focus_change.window != NULL) {
+        g_object_ref (fevent->focus_change.window);
+    }
+
+    gtk_widget_send_focus_change(widget, fevent);
+
+    //gdk_event_free (fevent);
+}
+
 static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal, guint state, bool doReleaseAfterPress = false)
 {
     GdkEvent* event = gdk_event_new(type);
@@ -321,7 +336,19 @@ void Browser::initialize(int width, int height)
 
         gtk_init(nullptr, nullptr);   // THREADCHECK
 
-        printf("GIOModule register\n");
+        //
+        // Forcibly disable glib's runtime giomodule loading, because we don't want ANYTHING system-based to be loaded by glib
+        // Unfortunately this would require a custom build of glib, and linkage of this project against that glib.
+        //
+        // Since this is currently too much work, we just override some environment variables here that glib needs,
+        // and load the required modules for TLS/SSL manually (note that these are linked in statically).
+        {
+            // Override conditions for _g_io_modules_ensure_loaded in glib/gio/giomodule.c
+            g_unsetenv("GIO_EXTRA_MODULES");
+            
+            // Override conditions for get_gio_module_dir in glib/gio/giomodule.c
+            g_setenv("GIO_MODULE_DIR", "nonworkingpath", true);
+        }
         {
             GIOModule* module = (GIOModule*)g_object_new(G_IO_TYPE_MODULE, NULL);
             g_io_gnomeproxy_load(NULL);
@@ -390,6 +417,11 @@ void Browser::initialize(int width, int height)
     // Show (and implicitly realize) entire widget tree
     // NOTE: This call may crash due to a bug in gtk+3 on OS X, see https://bugzilla.gnome.org/show_bug.cgi?id=667721
     gtk_widget_show_all(window);
+    //gtk_widget_realize(GTK_WIDGET(m_private->webView));
+    //gtk_widget_grab_focus(GTK_WIDGET(m_private->webView));
+
+    // Call focus-in event once to enable keyboard focus (and carets and such)
+    doFocusInEvent(GTK_WIDGET(m_private->webView));
     
     /// DENISE BEGIN
     registerWebExtension(this);
