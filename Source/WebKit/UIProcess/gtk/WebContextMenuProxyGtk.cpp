@@ -213,15 +213,6 @@ void WebContextMenuProxyGtk::menuPositionFunction(GtkMenu* menu, gint* x, gint* 
     GtkRequisition menuSize;
     gtk_widget_get_preferred_size(GTK_WIDGET(menu), &menuSize, 0);
 
-    GdkScreen* screen = gtk_widget_get_screen(popupMenu->m_webView);
-    *x = popupMenu->m_popupPosition.x();
-    if ((*x + menuSize.width) >= gdk_screen_get_width(screen))
-        *x -= menuSize.width;
-
-    *y = popupMenu->m_popupPosition.y();
-    if ((*y + menuSize.height) >= gdk_screen_get_height(screen))
-        *y -= menuSize.height;
-
     *pushIn = FALSE;
 }
 
