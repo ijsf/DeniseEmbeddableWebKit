@@ -151,6 +151,12 @@ namespace WebKitEmbed
     typedef std::function<void(uint8_t *, const Point&, const Rect&, const Rect&)> PaintCallback;
     void setPaintCallback(PaintCallback fn);
     
+    typedef std::function<void(bool)> IsLoadingCallback;
+    void setIsLoadingCallback(IsLoadingCallback fn);
+    
+    typedef std::function<void()> LoadFailedCallback;
+    void setLoadFailedCallback(LoadFailedCallback fn);
+
     /// DENISE BEGIN
     void deniseSetWrapperInterface(Denise::Internal::Wrapper* interface);
     /// DENISE END

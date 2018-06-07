@@ -34,11 +34,45 @@ public:
 static WebKitGlobalData g_WebKitData;
 
 ///////////////////////////////////////////////////////////////////////////////
+// Browser private class
+///////////////////////////////////////////////////////////////////////////////
+
+// Shielded off from Browser.h interface
+class BrowserPrivate
+{
+public:
+    BrowserPrivate() : initialized(false) {}
+
+    bool initialized;
+    Browser::PaintCallback paintCallback;
+    Browser::IsLoadingCallback isLoadingCallback;
+    Browser::LoadFailedCallback loadFailedCallback;
+    
+    // Only valid after initialize()
+    WebKitUserContentManager *userContentManager;
+    WebKitWebView *webView;
+    GtkWidget *window;
+    
+    /// DENISE BEGIN
+    Denise::Internal::Wrapper* m_deniseInterfaceWrapper;
+    /// DENISE END
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // GTK callbacks
 ///////////////////////////////////////////////////////////////////////////////
 
-static void webViewReadyToShow(WebKitWebView *webView, class Browser *browser)
-{
+static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEvent, const char *failingURI, GError *error, class BrowserPrivate* browserPrivate) {
+    return FALSE;
+}
+
+static void webViewIsLoadingChanged(WebKitWebView *webView, class BrowserPrivate* browserPrivate) {
+    if (browserPrivate->isLoadingCallback) {
+        browserPrivate->isLoadingCallback(webkit_web_view_is_loading(webView));
+    }
+}
+
+static void webViewReadyToShow(WebKitWebView *webView, class Browser* browser) {
     UNUSED_PARAM(browser);
 
     WebKitWindowProperties *windowProperties = webkit_web_view_get_window_properties(webView);
@@ -51,8 +85,7 @@ static void webViewReadyToShow(WebKitWebView *webView, class Browser *browser)
 
 /* Based on Tools/TestWebKitAPI/glib/WebKitGLib/WebViewTest.cpp */
 #include <JavaScriptCore/JSRetainPtr.h>
-static char* jsValueToCString(JSGlobalContextRef context, JSValueRef value)
-{
+static char* jsValueToCString(JSGlobalContextRef context, JSValueRef value) {
     g_assert(value);
     g_assert(JSValueIsString(context, value));
 
@@ -64,8 +97,7 @@ static char* jsValueToCString(JSGlobalContextRef context, JSValueRef value)
     JSStringGetUTF8CString(stringValue.get(), cString, cStringLength);
     return cString;
 }
-char* javascriptResultToCString(WebKitJavascriptResult* javascriptResult)
-{
+char* javascriptResultToCString(WebKitJavascriptResult* javascriptResult) {
     JSGlobalContextRef context = webkit_javascript_result_get_global_context(javascriptResult);
     g_assert(context);
     return jsValueToCString(context, webkit_javascript_result_get_value(javascriptResult));
@@ -293,25 +325,6 @@ static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal,
 // Browser class
 ///////////////////////////////////////////////////////////////////////////////
 
-// Private structure, shielded off from Browser.h interface
-class BrowserPrivate
-{
-public:
-    BrowserPrivate() : initialized(false) {}
-
-    bool initialized;
-    Browser::PaintCallback paintCallback;
-    
-    // Only valid after initialize()
-    WebKitUserContentManager *userContentManager;
-    WebKitWebView *webView;
-    GtkWidget *window;
-    
-    /// DENISE BEGIN
-    Denise::Internal::Wrapper* m_deniseInterfaceWrapper;
-    /// DENISE END
-};
-
 Browser::Browser()
     : m_private(new BrowserPrivate())
 {
@@ -394,7 +407,11 @@ void Browser::initialize(int width, int height)
     m_private->webView = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(m_private->userContentManager));
     g_assert(webkit_web_view_get_user_content_manager(m_private->webView) == m_private->userContentManager);
     webkit_web_view_set_settings(m_private->webView, g_WebKitData.settings);
+    
+    // Callbacks
     g_signal_connect(m_private->webView, "ready-to-show", G_CALLBACK(webViewReadyToShow), this);
+    g_signal_connect(m_private->webView, "notify::is-loading", G_CALLBACK(webViewIsLoadingChanged), m_private.get());
+    g_signal_connect(m_private->webView, "load-failed", G_CALLBACK(webViewLoadFailed), m_private.get());
     
     // Set transparent background color -- ACHTUNG requires WebKit transparency branch
     //const GdkRGBA backgroundColor = { 0, 0, 0, 0 };
@@ -509,6 +526,11 @@ void Browser::loadURL(const std::string &url)
 void Browser::setPaintCallback(PaintCallback fn)
 {
     m_private->paintCallback = fn;
+}
+
+void Browser::setIsLoadingCallback(IsLoadingCallback fn)
+{
+    m_private->isLoadingCallback = fn;
 }
 
 // ACHTUNG: Static hack to get the Denise::Internal interfaces to Extension.cpp,
