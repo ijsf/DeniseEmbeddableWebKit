@@ -126,9 +126,117 @@ In the editor, add the following patch on the first level:
 	EOS
 ```
 
+Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/gtk/issues/784`):
+
+```
+    patch :p0, <<~EOS
+      --- gdk/quartz/gdkwindow-quartz.c.old	2016-12-30 17:55:56.000000000 +0300
+      +++ gdk/quartz/gdkwindow-quartz.c	2017-03-08 18:05:13.000000000 +0300
+      @@ -1079,6 +1079,15 @@
+         GDK_QUARTZ_RELEASE_POOL;
+       }
+ 
+      +static GdkWindow *
+      +_gdk_quartz_window_get_effective_impl_transient_for(GdkWindow *window)
+      +{
+      +   window = (GDK_WINDOW_IMPL_QUARTZ (window->impl))->transient_for;
+      +   while (window && !GDK_IS_WINDOW_IMPL_QUARTZ (window->impl))
+      +     window = window->parent;
+      +   return window;
+      +}
+      +
+       /* Temporarily unsets the parent window, if the window is a
+        * transient. 
+        */
+      @@ -1086,6 +1095,7 @@
+       _gdk_quartz_window_detach_from_parent (GdkWindow *window)
+       {
+         GdkWindowImplQuartz *impl;
+      +  GdkWindow *transient_for;
+ 
+         g_return_if_fail (GDK_IS_WINDOW (window));
+ 
+      @@ -1093,11 +1103,12 @@
+   
+         g_return_if_fail (impl->toplevel != NULL);
+ 
+      -  if (impl->transient_for && !GDK_WINDOW_DESTROYED (impl->transient_for))
+      +  transient_for = _gdk_quartz_window_get_effective_impl_transient_for (window);
+      +  if (transient_for && !GDK_WINDOW_DESTROYED (transient_for))
+           {
+             GdkWindowImplQuartz *parent_impl;
+ 
+      -      parent_impl = GDK_WINDOW_IMPL_QUARTZ (impl->transient_for->impl);
+      +      parent_impl = GDK_WINDOW_IMPL_QUARTZ (transient_for->impl);
+             [parent_impl->toplevel removeChildWindow:impl->toplevel];
+             clear_toplevel_order ();
+           }
+      @@ -1108,6 +1119,7 @@
+       _gdk_quartz_window_attach_to_parent (GdkWindow *window)
+       {
+         GdkWindowImplQuartz *impl;
+      +  GdkWindow *transient_for;
+ 
+         g_return_if_fail (GDK_IS_WINDOW (window));
+ 
+      @@ -1115,11 +1127,12 @@
+   
+         g_return_if_fail (impl->toplevel != NULL);
+ 
+      -  if (impl->transient_for && !GDK_WINDOW_DESTROYED (impl->transient_for))
+      +  transient_for = _gdk_quartz_window_get_effective_impl_transient_for (window);
+      +  if (transient_for && !GDK_WINDOW_DESTROYED (transient_for))
+           {
+             GdkWindowImplQuartz *parent_impl;
+ 
+      -      parent_impl = GDK_WINDOW_IMPL_QUARTZ (impl->transient_for->impl);
+      +      parent_impl = GDK_WINDOW_IMPL_QUARTZ (transient_for->impl);
+             [parent_impl->toplevel addChildWindow:impl->toplevel ordered:NSWindowAbove];
+             clear_toplevel_order ();
+           }
+    EOS
+```
+
+Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/gtk/issues/986`):
+
+```
+    patch :p1, <<~EOS
+      diff -ruN gtk+-3.22.26.old/gdk/gdkwindow.c gtk+-3.22.26.new/gdk/gdkwindow.c
+      --- gtk+-3.22.26.old/gdk/gdkwindow.c	2017-10-26 12:23:40.000000000 +0200
+      +++ gtk+-3.22.26.new/gdk/gdkwindow.c	2017-11-20 01:46:52.000000000 +0100
+      @@ -8531,6 +8531,26 @@
+
+         pointer_info = _gdk_display_get_pointer_info (display, device);
+
+      +  //HACK: workaround for a bug in the Quartz driver which causes i.e. menus to hang
+      +#if defined(__APPLE__)
+      +  /* It seems the Quartz driver is sometimes not handling crossing events
+      +     correctly (i.e. after menu popups, tooltips appeared), which causes
+      +     toplevel_under_pointer to point to an old toplevel window or even NULL,
+      +     and finally the respective relevent child widget under the mouse pointer
+      +     could not be resolved due to this, which caused i.e. menus to ignore all
+      +     mouse events. The following is a harsh way to ensure toplevel_under_pointer
+      +     is always pointing to the window under the current pointer location by
+      +     updating this whenever pointer info is accessed.
+      +  */
+      +  if (pointer_info) {
+      +    if (pointer_info->toplevel_under_pointer)
+      +      g_object_unref (pointer_info->toplevel_under_pointer);
+      +    GdkWindow* w =
+      +      _gdk_device_window_at_position (device, NULL, NULL, NULL, TRUE);
+      +    pointer_info->toplevel_under_pointer = w ? g_object_ref (w) : NULL;
+      +  }
+      +#endif
+      +
+         if (event_window == pointer_info->toplevel_under_pointer)
+           pointer_window =
+             _gdk_window_find_descendant_at (event_window,
+    EOS
+```
+
 Add the following configure arguments for static linking and to disable unnecessary features:
 
-    --disable-doc-cross-references --disable-cloudprint --disable-papi --disable-cups
+    --disable-doc-cross-references --disable-cloudprint --disable-modules --disable-papi --disable-cups
 
 Save and close, and make sure to rebuild the package:
 
