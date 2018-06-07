@@ -56,6 +56,22 @@ namespace WebKitEmbed
     class Browser
     {
     public:
+        // Mirror of GError
+        struct Error {
+            int code;
+            std::string message;
+        };
+        
+        // Mirror of WebKitLoadEvent
+        enum LoadEvent {
+            LOAD_UNKNOWN,
+            
+            LOAD_STARTED,
+            LOAD_REDIRECTED,
+            LOAD_COMMITTED,
+            LOAD_FINISHED
+        };
+        
         enum ModifierKeys {
             MODIFIER_NONE = 0,
             MODIFIER_SHIFT = 1,
@@ -154,7 +170,9 @@ namespace WebKitEmbed
         typedef std::function<void(bool)> IsLoadingCallback;
         void setIsLoadingCallback(IsLoadingCallback fn);
 
-        typedef std::function<void()> LoadFailedCallback;
+        // bool loadFailed(const LoadEvent loadEvent, const std::string URI, const Error error)
+        // Return true to stop other handlers from being invoked, false to propagate the event further
+        typedef std::function<bool(const LoadEvent loadEvent, const std::string, const Error)> LoadFailedCallback;
         void setLoadFailedCallback(LoadFailedCallback fn);
 
         /// DENISE BEGIN

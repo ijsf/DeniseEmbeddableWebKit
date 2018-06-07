@@ -62,7 +62,33 @@ public:
 // GTK callbacks
 ///////////////////////////////////////////////////////////////////////////////
 
-static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEvent, const char *failingURI, GError *error, class BrowserPrivate* browserPrivate) {
+static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEvent_, const char* URI_, GError* error_, class BrowserPrivate* browserPrivate) {
+    if (browserPrivate->loadFailedCallback) {
+        // Translate to our own types
+        Browser::LoadEvent loadEvent;
+        if (loadEvent_ == WEBKIT_LOAD_STARTED) {
+            loadEvent = Browser::LOAD_STARTED;
+        }
+        else if (loadEvent_ == WEBKIT_LOAD_REDIRECTED) {
+            loadEvent = Browser::LOAD_REDIRECTED;
+        }
+        else if (loadEvent_ == WEBKIT_LOAD_COMMITTED) {
+            loadEvent = Browser::LOAD_COMMITTED;
+        }
+        else if (loadEvent_ == WEBKIT_LOAD_FINISHED) {
+            loadEvent = Browser::LOAD_FINISHED;
+        }
+        else {
+            loadEvent = Browser::LOAD_UNKNOWN;
+        }
+        Browser::Error error = {
+            error_->code,
+            std::string(error_->message)
+        };
+        if (browserPrivate->loadFailedCallback(loadEvent, std::string(URI_), error)) {
+            return TRUE;
+        }
+    }
     return FALSE;
 }
 
