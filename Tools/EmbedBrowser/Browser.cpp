@@ -559,6 +559,11 @@ void Browser::setIsLoadingCallback(IsLoadingCallback fn)
     m_private->isLoadingCallback = fn;
 }
 
+void Browser::setLoadFailedCallback(LoadFailedCallback fn)
+{
+    m_private->loadFailedCallback = fn;
+}
+
 // ACHTUNG: Static hack to get the Denise::Internal interfaces to Extension.cpp,
 // as there is currently no easy way to get to the Browser instance in which these interfaces are stored as member vars.
 #include "Extension.h"

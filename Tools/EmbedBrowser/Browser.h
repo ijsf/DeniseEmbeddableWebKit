@@ -167,7 +167,7 @@ namespace WebKitEmbed
         typedef std::function<void(uint8_t *, const Point&, const Rect&, const Rect&)> PaintCallback;
         void setPaintCallback(PaintCallback fn);
 
-        typedef std::function<void(bool)> IsLoadingCallback;
+        typedef std::function<void(const bool)> IsLoadingCallback;
         void setIsLoadingCallback(IsLoadingCallback fn);
 
         // bool loadFailed(const LoadEvent loadEvent, const std::string URI, const Error error)
