@@ -92,8 +92,8 @@ static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEv
     return FALSE;
 }
 
-static void webViewIsLoadingChanged(WebKitWebView *webView, class BrowserPrivate* browserPrivate) {
-    if (browserPrivate->isLoadingCallback) {
+static void webViewIsLoadingChanged(WebKitWebView *webView, GParamSpec* paramSpec, class BrowserPrivate* browserPrivate) {
+    if (browserPrivate && browserPrivate->isLoadingCallback) {
         browserPrivate->isLoadingCallback(webkit_web_view_is_loading(webView));
     }
 }
@@ -359,12 +359,21 @@ Browser::Browser()
 
 Browser::~Browser()
 {
-    // Reset the paint callback
-    webkit_web_view_set_paint_callback(m_private->webView, WebKitWebViewPaintCallback());
+    if (m_private->webView) {
+        gtk_widget_destroy(GTK_WIDGET(m_private->webView));
+        m_private->webView = nullptr;
+    }
+
+    if (m_private->window) {
+        gtk_widget_destroy(m_private->window);
+        m_private->window = nullptr;
+    }
     
-    // Destroy (GtkWidget)m_private->webView
-    // Destroy m_private->userContentManager?
-    // Destroy (GtkWidget)m_private->window
+    if (m_private->userContentManager) {
+        g_object_unref(m_private->userContentManager);
+        m_private->userContentManager = nullptr;
+    }
+    m_private->initialized = false;
 }
 
 void Browser::initialize(int width, int height)
@@ -422,8 +431,7 @@ void Browser::initialize(int width, int height)
     }
 
     // Create offscreen window
-    GtkWidget *window = gtk_offscreen_window_new();
-    m_private->window = window;
+    m_private->window = gtk_offscreen_window_new();
     gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
 
     // Create WebKitUserContentManager
@@ -455,11 +463,11 @@ void Browser::initialize(int width, int height)
         }
     });
     
-    gtk_container_add(GTK_CONTAINER(window), GTK_WIDGET(m_private->webView));
+    gtk_container_add(GTK_CONTAINER(m_private->window), GTK_WIDGET(m_private->webView));
 
     // Show (and implicitly realize) entire widget tree
     // NOTE: This call may crash due to a bug in gtk+3 on OS X, see https://bugzilla.gnome.org/show_bug.cgi?id=667721
-    gtk_widget_show_all(window);
+    gtk_widget_show_all(m_private->window);
     //gtk_widget_realize(GTK_WIDGET(m_private->webView));
     //gtk_widget_grab_focus(GTK_WIDGET(m_private->webView));
 
