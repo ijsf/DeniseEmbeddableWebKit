@@ -213,7 +213,7 @@ void WebProcess::initializeConnection(IPC::Connection* connection)
 {
     ChildProcess::initializeConnection(connection);
 
-    connection->setShouldExitOnSyncMessageSendFailure(true);
+    connection->setShouldExitOnSyncMessageSendFailure(false);
 
 #if HAVE(QOS_CLASSES)
     connection->setShouldBoostMainThreadOnSyncMessage(true);

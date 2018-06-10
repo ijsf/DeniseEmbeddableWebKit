@@ -21,17 +21,16 @@ namespace WebKitEmbed
 // Globals
 ///////////////////////////////////////////////////////////////////////////////
 
-class WebKitGlobalData {
+class GlobalData {
 public:
-    WebKitGlobalData()
+    GlobalData()
         : initialized(false)
     {}
 
     bool initialized;
-    WebKitSettings *settings;
     uint64_t tid;
 };
-static WebKitGlobalData g_WebKitData;
+static GlobalData g_Once;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Browser private class
@@ -49,9 +48,11 @@ public:
     Browser::LoadFailedCallback loadFailedCallback;
     
     // Only valid after initialize()
-    WebKitUserContentManager *userContentManager;
-    WebKitWebView *webView;
-    GtkWidget *window;
+    WebKitWebContext* webContext;
+    WebKitSettings* settings;
+    WebKitUserContentManager* userContentManager;
+    WebKitWebView* webView;
+    GtkWidget* window;
     
     /// DENISE BEGIN
     Denise::Internal::Wrapper* m_deniseInterfaceWrapper;
@@ -373,14 +374,22 @@ Browser::~Browser()
         g_object_unref(m_private->userContentManager);
         m_private->userContentManager = nullptr;
     }
+    if (m_private->settings) {
+        g_object_unref(m_private->settings);
+        m_private->settings = nullptr;
+    }
+    if (m_private->webContext) {
+        g_object_unref(m_private->webContext);
+        m_private->webContext = nullptr;
+    }
     m_private->initialized = false;
 }
 
 void Browser::initialize(int width, int height)
 {
     // Perform one-time initialization if necessary (NOT thread-safe)
-    if (!g_WebKitData.initialized) {
-        g_WebKitData.initialized = true;
+    if (!g_Once.initialized) {
+        g_Once.initialized = true;
 
         gtk_init(nullptr, nullptr);   // THREADCHECK
 
@@ -409,38 +418,45 @@ void Browser::initialize(int width, int height)
         // Make sure the default im module imquartz is not used on OS X, as this will cause a crash with GtkOffscreenWindow
         g_object_set(gtk_settings_get_default(), "gtk-im-module", "gtk-im-context-simple", nullptr);
 
-        WebKitWebContext *globalContext = webkit_web_context_get_default();
-
         // Store thread id for thread safety checks
-        pthread_threadid_np(nullptr, &g_WebKitData.tid);
-
-        // Settings
-        g_WebKitData.settings = webkit_settings_new();
-        webkit_settings_set_enable_developer_extras(g_WebKitData.settings, FALSE);
-        webkit_settings_set_enable_webgl(g_WebKitData.settings, FALSE);
-        webkit_settings_set_enable_media_stream(g_WebKitData.settings, FALSE);
-        webkit_settings_set_enable_java(g_WebKitData.settings, FALSE);
-        webkit_settings_set_enable_plugins(g_WebKitData.settings, FALSE);
-        webkit_settings_set_javascript_can_open_windows_automatically(g_WebKitData.settings, FALSE);
-        webkit_settings_set_enable_developer_extras(g_WebKitData.settings, FALSE);
-        webkit_settings_set_javascript_can_access_clipboard(g_WebKitData.settings, TRUE);
-        webkit_settings_set_enable_write_console_messages_to_stdout(g_WebKitData.settings, TRUE);
-
-        // Faux single process mode for global context
-        webkit_web_context_set_process_model(globalContext, WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS);
+        pthread_threadid_np(nullptr, &g_Once.tid);
     }
 
     // Create offscreen window
     m_private->window = gtk_offscreen_window_new();
     gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
+    
+    // Create WebKitWebContext explicitly
+    // This is to avoid webkit_web_context_get_default() which uses an undestroyable GOnce
+    m_private->webContext = webkit_web_context_new();
+
+    // Settings
+    m_private->settings = webkit_settings_new();
+    webkit_settings_set_enable_developer_extras(m_private->settings, FALSE);
+    webkit_settings_set_enable_webgl(m_private->settings, FALSE);
+    webkit_settings_set_enable_media_stream(m_private->settings, FALSE);
+    webkit_settings_set_enable_java(m_private->settings, FALSE);
+    webkit_settings_set_enable_plugins(m_private->settings, FALSE);
+    webkit_settings_set_javascript_can_open_windows_automatically(m_private->settings, FALSE);
+    webkit_settings_set_enable_developer_extras(m_private->settings, FALSE);
+    webkit_settings_set_javascript_can_access_clipboard(m_private->settings, TRUE);
+    webkit_settings_set_enable_write_console_messages_to_stdout(m_private->settings, TRUE);
+
+    // Faux single process mode for global context
+    webkit_web_context_set_process_model(m_private->webContext, WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS);
 
     // Create WebKitUserContentManager
     m_private->userContentManager = webkit_user_content_manager_new();
 
     // Create WebKitWebView with default global context (GtkWidget)
-    m_private->webView = WEBKIT_WEB_VIEW(webkit_web_view_new_with_user_content_manager(m_private->userContentManager));
+    // Based on webkit_web_view_new_with_user_content_manager and webkit_web_view_new_with_context
+    m_private->webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+        "is-ephemeral", false,
+        "web-context", m_private->webContext,
+        "user-content-manager", m_private->userContentManager,
+        nullptr));
     g_assert(webkit_web_view_get_user_content_manager(m_private->webView) == m_private->userContentManager);
-    webkit_web_view_set_settings(m_private->webView, g_WebKitData.settings);
+    webkit_web_view_set_settings(m_private->webView, m_private->settings);
     
     // Callbacks
     g_signal_connect(m_private->webView, "ready-to-show", G_CALLBACK(webViewReadyToShow), this);
@@ -486,7 +502,7 @@ void Browser::tick()
     // Thread safety check (caller thread must be identical for all GTK calls)
     uint64_t tid;
     pthread_threadid_np(nullptr, &tid);
-    assert(tid == g_WebKitData.tid);
+    assert(tid == g_Once.tid);
     
     // ACHTUNG check if necessary
     gtk_main_iteration_do(FALSE);
