@@ -226,6 +226,68 @@ JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObject
 }
 
 // THREAD-BROWSER
+JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
+    UNUSED_PARAM(object);
+    UNUSED_PARAM(thisObject);
+
+    // Error related parameters
+    JSObjectRef objCallback;
+    
+    /* DeniseWrapper.setHeader({ visible: boolean }, callback: function(err: ErrorCode)) */
+    if (argumentCount == 2) {
+        // Get callback
+        {
+            JSObjectRef _callback = JSValueToObject(context, arguments[1], exception);
+            if (!*exception) {
+                if(!JSObjectIsFunction(context, _callback)) {
+                    JSStringRef strError = JSStringCreateWithUTF8CString("TypeError: callback is not a function");
+                    *exception = JSValueMakeString(context, strError);
+                    JSStringRelease(strError);
+                }
+            }
+            if (!*exception) {
+                // Assume valid callback function object, so store into objCallback
+                objCallback = _callback;
+            }
+        }
+        if (!*exception) {
+            // Get parameters
+            JSObjectRef objParams = JSValueToObject(context, arguments[0], exception);
+            if (!*exception) {
+                // params.visible
+                {
+                    JSStringRef jsstrVisible = JSStringCreateWithUTF8CString("visible");
+                    const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, jsstrVisible, exception));
+                    if(!*exception && g_deniseInterfaceWrapper) {
+                        g_deniseInterfaceWrapper->setHeader(visible);
+                    }
+                    JSStringRelease(jsstrVisible);
+                }
+            }
+        }
+    }
+    else {
+        JSStringRef strError = JSStringCreateWithUTF8CString("TypeError: function requires 2 arguments");
+        *exception = JSValueMakeString(context, strError);
+        JSStringRelease(strError);
+    }
+
+    // Fall-through code path for all cases
+    
+    // Check for exception, in which case we call the callback, if it is defined at this point
+    if (*exception && objCallback) {
+        // Assume ERROR_INVALID_PARAMETERS as code for any errors occurring above,
+        // use the string contained inside exception as message.
+        
+        /* function(err) */
+        JSValueRef args[] = { deniseMakeErrorObject(context, DeniseError::ERROR_INVALID_PARAMETERS, *exception) };
+        JSObjectCallAsFunction(context, objCallback, nullptr, 1, args, nullptr);
+    }
+    
+    return JSValueMakeUndefined(context);
+}
+
+// THREAD-BROWSER
 void deniseBindJS(JSGlobalContextRef context) {
     JSObjectRef objGlobal = JSContextGetGlobalObject(context);
     if (objGlobal) {
@@ -241,6 +303,12 @@ void deniseBindJS(JSGlobalContextRef context) {
         {
             JSStringRef str = JSStringCreateWithUTF8CString("setOverlay");
             JSObjectSetProperty(context, objDeniseWrapper, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSSetOverlay), kJSPropertyAttributeNone, nullptr);
+            JSStringRelease(str);
+        }
+        // Create function DeniseWrapper.setHeader
+        {
+            JSStringRef str = JSStringCreateWithUTF8CString("setHeader");
+            JSObjectSetProperty(context, objDeniseWrapper, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSSetHeader), kJSPropertyAttributeNone, nullptr);
             JSStringRelease(str);
         }
         // Bind to 'DeniseWrapper' in global object

@@ -30,6 +30,7 @@ namespace Denise
        
             virtual void loadProduct(const ProductPayload payload) = 0;
             virtual void setOverlay(const bool visible) = 0;
+            virtual void setHeader(const bool visible) = 0;
    
         protected:
             virtual ~Wrapper() {};
