@@ -234,6 +234,26 @@ Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/
     EOS
 ```
 
+Also add the following hack patch:
+
+```
+    patch :p1, <<~EOS
+      --- gtk+-3.22.30-original/gdk/quartz/gdkeventloop-quartz.c	2016-10-22 06:14:29.000000000 +0200
+      +++ gtk+-3.22.30/gdk/quartz/gdkeventloop-quartz.c	2018-06-22 15:52:21.000000000 +0200
+      @@ -641,8 +641,8 @@
+          */
+         if (current_loop_level == 0 && g_main_depth() == 0 && getting_events == 0)
+           {
+      -      if (autorelease_pool)
+      -        [autorelease_pool drain];
+      +//      if (autorelease_pool)
+      +//        [autorelease_pool drain];
+ 
+             autorelease_pool = [[NSAutoreleasePool alloc] init];
+           }
+    EOS
+```
+
 Add the following configure arguments for static linking and to disable unnecessary features:
 
     --disable-doc-cross-references --disable-cloudprint --disable-modules --disable-papi --disable-cups
