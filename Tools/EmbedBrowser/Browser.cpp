@@ -410,11 +410,36 @@ bool Browser::isInitialized() const {
 }
 
 std::shared_ptr<Browser::Tab> Browser::createTab() {
-    return std::shared_ptr<Browser::Tab>(new Browser::Tab(m_private.get()));
+    // Create instance and insert into tabs map
+    std::shared_ptr<Browser::Tab> tab(new Browser::Tab(m_private->currentTabIndex, m_private.get()));
+    m_private->tabs.insert(std::pair<size_t, std::shared_ptr<Browser::Tab>>(m_private->currentTabIndex, tab));
+    ++m_private->currentTabIndex;
+    return tab;
 }
 
-Browser::Tab::Tab(BrowserPrivate* parent)
-: m_private(new TabPrivate(parent)) {
+Browser::Tab::Tab(const Browser::Tab::Index tabIndex, BrowserPrivate* parent)
+: m_private(new TabPrivate(tabIndex, parent)) {
+}
+
+Browser::Tab::~Tab() {
+    // Remove from tabs map
+    {
+        BrowserPrivate::TabMap& tabs = m_private->parent->tabs;
+        auto it = tabs.find(m_private->tabIndex);
+        assert(it != tabs.end());
+        tabs.erase(it);
+    }
+
+    // Cleanup
+    if (m_private->webView) {
+        gtk_widget_destroy(GTK_WIDGET(m_private->webView));
+        m_private->webView = nullptr;
+    }
+    if (m_private->window) {
+        gtk_widget_destroy(m_private->window);
+        m_private->window = nullptr;
+    }
+    m_private->initialized = false;
 }
 
 void Browser::Tab::initialize(const unsigned int width, const unsigned int height) {
@@ -465,21 +490,9 @@ void Browser::Tab::initialize(const unsigned int width, const unsigned int heigh
     doFocusInEvent(GTK_WIDGET(m_private->webView));
     
     // Register Denise web extension
-    registerWebExtension(m_private.get());
+    registerWebExtension(m_private->parent, m_private->tabIndex);
 
     m_private->initialized = true;
-}
-
-Browser::Tab::~Tab() {
-    if (m_private->webView) {
-        gtk_widget_destroy(GTK_WIDGET(m_private->webView));
-        m_private->webView = nullptr;
-    }
-    if (m_private->window) {
-        gtk_widget_destroy(m_private->window);
-        m_private->window = nullptr;
-    }
-    m_private->initialized = false;
 }
 
 #if 0

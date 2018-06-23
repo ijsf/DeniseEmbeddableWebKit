@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vector>
+#include <map>
 
 #include "Browser.h"
 
@@ -22,7 +22,7 @@ namespace WebKitEmbed
 class TabPrivate
 {
 public:
-    TabPrivate(class BrowserPrivate* parent_) : initialized(false), parent(parent_) {};
+    TabPrivate(const Browser::Tab::Index tabIndex_, class BrowserPrivate* parent_) : initialized(false), tabIndex(tabIndex_), parent(parent_) {};
     ~TabPrivate() = default;
 
     Browser::Tab::CallbackPaint callbackPaint;
@@ -37,12 +37,13 @@ public:
     WebKitWebView* webView;
     GtkWidget* window;
     
+    const Browser::Tab::Index tabIndex;
     class BrowserPrivate* parent;
 };
 class BrowserPrivate
 {
 public:
-    BrowserPrivate() : initialized(false) {};
+    BrowserPrivate() : initialized(false), currentTabIndex(0) {};
     ~BrowserPrivate() = default;
 
     // Global browser variables, only valid after initialize()
@@ -52,7 +53,9 @@ public:
     WebKitUserContentManager* userContentManager;
     
     // Tabs
-    std::vector<std::shared_ptr<Browser::Tab>> tabs;
+    typedef std::map<Browser::Tab::Index, std::shared_ptr<Browser::Tab>> TabMap;
+    TabMap tabs;
+    Browser::Tab::Index currentTabIndex;
 };
 
 }

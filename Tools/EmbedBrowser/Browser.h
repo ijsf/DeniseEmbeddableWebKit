@@ -46,9 +46,12 @@ namespace WebKitEmbed
         * Tab
         */
         class Tab {
+        public:
+            typedef size_t Index;
+            
         protected:
             friend class Browser;
-            Tab(class BrowserPrivate* parent);
+            Tab(const Index tabIndex, class BrowserPrivate* parent);
    
         public:
             ~Tab();
@@ -83,7 +86,7 @@ namespace WebKitEmbed
             void setCallbackDeniseLoadProduct(CallbackDeniseLoadProduct fn);
             void setCallbackDeniseSetOverlay(CallbackDeniseSetOverlay fn);
             void setCallbackDeniseSetHeader(CallbackDeniseSetHeader fn);
-        private:
+
             // pImpl
             std::shared_ptr<class TabPrivate> m_private;
         };
@@ -96,7 +99,6 @@ namespace WebKitEmbed
         bool isInitialized() const;
         std::shared_ptr<Tab> createTab();
 
-    private:
         // pImpl
         std::unique_ptr<class BrowserPrivate> m_private;
     };

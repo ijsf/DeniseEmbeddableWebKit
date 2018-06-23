@@ -6,12 +6,28 @@
 
 #define UNUSED_PARAM(variable) (void)variable
 
+// Global hack, assume there is always a browser
+WebKitEmbed::BrowserPrivate* g_browser = nullptr;
+
 namespace WebKitEmbed
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Denise specific code
 ///////////////////////////////////////////////////////////////////////////////
+
+std::shared_ptr<TabPrivate> getTabFromObject(JSObjectRef object) {
+    // Retrieve TabPrivate instance in a safe way (handles already deleted tabs gracefully)
+    assert(g_browser != nullptr);
+    const Browser::Tab::Index tabIndex = (const Browser::Tab::Index)JSObjectGetPrivate(object);
+    if (g_browser->tabs.find(tabIndex) != g_browser->tabs.end()) {
+        std::shared_ptr<Browser::Tab> tab = g_browser->tabs.find(tabIndex)->second;
+        if (tab) {
+            return tab->m_private;
+        }
+    }
+    return nullptr;
+}
 
 enum DeniseError {
     ERROR_NONE = 0,
@@ -71,8 +87,7 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
     
-    TabPrivate* tab = (TabPrivate*)JSObjectGetPrivate(object);
-    assert(tab != nullptr);
+    std::shared_ptr<TabPrivate> tab = getTabFromObject(object);
 
     /* DeniseWrapper.loadProduct(payload: ProductPayload, callback: function(err: ErrorCode)) */
     if (argumentCount == 2) {
@@ -156,7 +171,7 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
                 JSStringRelease(jsstrKey);
             }
             // Callback if parameters were valid
-            if (valid && tab->callbackDeniseLoadProduct) {
+            if (valid && tab != nullptr && tab->callbackDeniseLoadProduct) {
                 tab->callbackDeniseLoadProduct(productType, productId, productLoadData);
             }
         }
@@ -175,8 +190,7 @@ JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObject
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
 
-    TabPrivate* tab = (TabPrivate*)JSObjectGetPrivate(object);
-    assert(tab != nullptr);
+    std::shared_ptr<TabPrivate> tab = getTabFromObject(object);
 
     // Error related parameters
     JSObjectRef objCallback;
@@ -206,7 +220,7 @@ JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObject
                 {
                     JSStringRef jsstrVisible = JSStringCreateWithUTF8CString("visible");
                     const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, jsstrVisible, exception));
-                    if(!*exception && tab->callbackDeniseSetOverlay) {
+                    if(!*exception && tab != nullptr && tab->callbackDeniseSetOverlay) {
                         tab->callbackDeniseSetOverlay(visible);
                     }
                     JSStringRelease(jsstrVisible);
@@ -240,8 +254,7 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
 
-    TabPrivate* tab = (TabPrivate*)JSObjectGetPrivate(object);
-    assert(tab != nullptr);
+    std::shared_ptr<TabPrivate> tab = getTabFromObject(object);
 
     // Error related parameters
     JSObjectRef objCallback;
@@ -271,7 +284,7 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
                 {
                     JSStringRef jsstrVisible = JSStringCreateWithUTF8CString("visible");
                     const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, jsstrVisible, exception));
-                    if(!*exception && tab->callbackDeniseSetHeader) {
+                    if(!*exception && tab != nullptr && tab->callbackDeniseSetHeader) {
                         tab->callbackDeniseSetHeader(visible);
                     }
                     JSStringRelease(jsstrVisible);
@@ -301,11 +314,12 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
 }
 
 // THREAD-BROWSER
-void deniseBindJS(JSGlobalContextRef context, TabPrivate* tab) {
+void deniseBindJS(JSGlobalContextRef context, const Browser::Tab::Index tabIndex) {
     JSObjectRef objGlobal = JSContextGetGlobalObject(context);
     if (objGlobal) {
         // Create DeniseWrapper object as default JS Object
-        JSObjectRef objDeniseWrapper = JSObjectMake(context, nullptr, tab);
+        // (tabIndex encoded into pointer, which should be fine)
+        JSObjectRef objDeniseWrapper = JSObjectMake(context, nullptr, (void*)tabIndex);
         // Create function DeniseWrapper.loadProduct
         {
             JSStringRef str = JSStringCreateWithUTF8CString("loadProduct");
@@ -338,15 +352,20 @@ void deniseBindJS(JSGlobalContextRef context, TabPrivate* tab) {
 }
 
 // THREAD-BROWSER
-void webViewWindowObjectCleared(WebKitScriptWorld *world, WebKitWebPage* page, WebKitFrame* frame, TabPrivate* tab) {
-    deniseBindJS(webkit_frame_get_javascript_context_for_script_world(frame, world), tab);
+void webViewWindowObjectCleared(WebKitScriptWorld *world, WebKitWebPage* page, WebKitFrame* frame, const Browser::Tab::Index tabIndex) {
+    deniseBindJS(webkit_frame_get_javascript_context_for_script_world(frame, world), tabIndex);
 }
 
 // THREAD-UI
-extern void registerWebExtension(TabPrivate* tab) {
-    webkit_script_world_set_create_callback([tab](WebKitScriptWorld* world)->void {
+extern void registerWebExtension(BrowserPrivate* browser, const Browser::Tab::Index tabIndex) {
+    // Global hack
+    assert(g_browser == nullptr || g_browser == browser);
+    g_browser = browser;
+    
+    webkit_script_world_set_create_callback([tabIndex](WebKitScriptWorld* world)->void {
         // THREAD-BROWSER
-        g_signal_connect(world, "window-object-cleared", G_CALLBACK(webViewWindowObjectCleared), tab);
+        // (tabIndex encoded into pointer, which should be fine)
+        g_signal_connect(world, "window-object-cleared", G_CALLBACK(webViewWindowObjectCleared), (void*)tabIndex);
     });
 }
 

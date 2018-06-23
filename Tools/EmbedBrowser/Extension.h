@@ -2,9 +2,9 @@
 
 #include <memory>
 
-// ACHTUNG: avoid pointers
+#include "Browser.h"
 
 namespace WebKitEmbed
 {
-    extern void registerWebExtension(class TabPrivate* tab);
+    extern void registerWebExtension(class BrowserPrivate* tab, const Browser::Tab::Index tabIndex);
 };
