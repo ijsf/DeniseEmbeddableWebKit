@@ -1,11 +1,12 @@
+#include "Private.h"
+#include "Browser.h"
+#include "Extension.h"
+
 #include <webkit2/webkit2.h>
 #include <JavaScriptCore/JavaScript.h>
 
 #include <pthread.h>
 #include <gdk/gdk.h>
-
-#include "Browser.h"
-#include "Extension.h"
 
 #define UNUSED_PARAM(variable) (void)variable
 
@@ -33,38 +34,11 @@ public:
 static GlobalData g_Once;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Browser private class
-///////////////////////////////////////////////////////////////////////////////
-
-// Shielded off from Browser.h interface
-class BrowserPrivate
-{
-public:
-    BrowserPrivate() : initialized(false) {}
-
-    bool initialized;
-    Browser::PaintCallback paintCallback;
-    Browser::IsLoadingCallback isLoadingCallback;
-    Browser::LoadFailedCallback loadFailedCallback;
-    
-    // Only valid after initialize()
-    WebKitWebContext* webContext;
-    WebKitSettings* settings;
-    WebKitUserContentManager* userContentManager;
-    WebKitWebView* webView;
-    GtkWidget* window;
-    
-    /// DENISE BEGIN
-    Denise::Internal::Wrapper* m_deniseInterfaceWrapper;
-    /// DENISE END
-};
-
-///////////////////////////////////////////////////////////////////////////////
 // GTK callbacks
 ///////////////////////////////////////////////////////////////////////////////
 
-static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEvent_, const char* URI_, GError* error_, class BrowserPrivate* browserPrivate) {
-    if (browserPrivate->loadFailedCallback) {
+static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEvent_, const char* URI_, GError* error_, TabPrivate* tabPrivate) {
+    if (tabPrivate->callbackLoadFailed) {
         // Translate to our own types
         Browser::LoadEvent loadEvent;
         if (loadEvent_ == WEBKIT_LOAD_STARTED) {
@@ -86,19 +60,20 @@ static gboolean webViewLoadFailed(WebKitWebView *webView, WebKitLoadEvent loadEv
             error_->code,
             std::string(error_->message)
         };
-        if (browserPrivate->loadFailedCallback(loadEvent, std::string(URI_), error)) {
+        if (tabPrivate->callbackLoadFailed(loadEvent, std::string(URI_), error)) {
             return TRUE;
         }
     }
     return FALSE;
 }
 
-static void webViewIsLoadingChanged(WebKitWebView *webView, GParamSpec* paramSpec, class BrowserPrivate* browserPrivate) {
-    if (browserPrivate && browserPrivate->isLoadingCallback) {
-        browserPrivate->isLoadingCallback(webkit_web_view_is_loading(webView));
+static void webViewIsLoadingChanged(WebKitWebView* webView, GParamSpec* paramSpec, TabPrivate* tabPrivate) {
+    if (tabPrivate && tabPrivate->callbackIsLoading) {
+        tabPrivate->callbackIsLoading(webkit_web_view_is_loading(webView));
     }
 }
 
+#if 0
 static void webViewReadyToShow(WebKitWebView *webView, class Browser* browser) {
     UNUSED_PARAM(browser);
 
@@ -109,6 +84,7 @@ static void webViewReadyToShow(WebKitWebView *webView, class Browser* browser) {
 
     printf("webViewReadyToShow (%u,%u,%u,%u)\n", geometry.x, geometry.y, geometry.width, geometry.height);
 }
+#endif
 
 /* Based on Tools/TestWebKitAPI/glib/WebKitGLib/WebViewTest.cpp */
 #include <JavaScriptCore/JSRetainPtr.h>
@@ -234,8 +210,7 @@ static guint keyToGdkKey(const unsigned int key) {
     };
 }
 
-static guint modifierToGdkState(Browser::ModifierKeys keys)
-{
+static guint modifierToGdkState(Browser::ModifierKeys keys) {
     guint state = 0;
     
     if (keys & Browser::MODIFIER_SHIFT) {
@@ -251,8 +226,7 @@ static guint modifierToGdkState(Browser::ModifierKeys keys)
     return state;
 }
 
-static guint modifierToGdkButton(Browser::ModifierKeys keys)
-{
+static guint modifierToGdkButton(Browser::ModifierKeys keys) {
     if (keys & Browser::MODIFIER_LEFT_MOUSE) {
         return GDK_BUTTON_PRIMARY;
     }
@@ -267,8 +241,7 @@ static guint modifierToGdkButton(Browser::ModifierKeys keys)
 }
 
 // Source/WebKit/UIProcess/Automation/gtk/WebAutomationSessionGtk.cpp
-static void doMouseEvent(GdkEventType type, GtkWidget* widget, int x, int y, guint button, guint state)
-{
+static void doMouseEvent(GdkEventType type, GtkWidget* widget, int x, int y, guint button, guint state) {
     assert(type == GDK_BUTTON_PRESS || type == GDK_BUTTON_RELEASE);
 
     GdkEvent *event = gdk_event_new(type);
@@ -290,8 +263,7 @@ static void doMouseEvent(GdkEventType type, GtkWidget* widget, int x, int y, gui
 }
 
 // Source/WebKit/UIProcess/Automation/gtk/WebAutomationSessionGtk.cpp
-static void doMotionEvent(GtkWidget* widget, int x, int y, guint state)
-{
+static void doMotionEvent(GtkWidget* widget, int x, int y, guint state) {
     GdkEvent *event = gdk_event_new(GDK_MOTION_NOTIFY);
     event->motion.window = gtk_widget_get_window(widget);
     g_object_ref(event->motion.window);
@@ -309,8 +281,7 @@ static void doMotionEvent(GtkWidget* widget, int x, int y, guint state)
     //g_free(event);
 }
 
-static void doFocusInEvent(GtkWidget* widget)
-{
+static void doFocusInEvent(GtkWidget* widget) {
     GdkEvent* fevent = gdk_event_new(GDK_FOCUS_CHANGE);
     fevent->focus_change.type = GDK_FOCUS_CHANGE;
     fevent->focus_change.in = TRUE;
@@ -324,8 +295,7 @@ static void doFocusInEvent(GtkWidget* widget)
     //gdk_event_free (fevent);
 }
 
-static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal, guint state, bool doReleaseAfterPress = false)
-{
+static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal, guint state, bool doReleaseAfterPress = false) {
     GdkEvent* event = gdk_event_new(type);
     event->key.keyval = keyVal;
 
@@ -358,18 +328,7 @@ Browser::Browser()
     // Do do any initialization in here since this may depend on virtual functions (which are not yet available here)
 }
 
-Browser::~Browser()
-{
-    if (m_private->webView) {
-        gtk_widget_destroy(GTK_WIDGET(m_private->webView));
-        m_private->webView = nullptr;
-    }
-
-    if (m_private->window) {
-        gtk_widget_destroy(m_private->window);
-        m_private->window = nullptr;
-    }
-    
+Browser::~Browser() {
     if (m_private->userContentManager) {
         g_object_unref(m_private->userContentManager);
         m_private->userContentManager = nullptr;
@@ -385,8 +344,7 @@ Browser::~Browser()
     m_private->initialized = false;
 }
 
-void Browser::initialize(int width, int height)
-{
+void Browser::initialize() {
     // Perform one-time initialization if necessary (NOT thread-safe)
     if (!g_Once.initialized) {
         g_Once.initialized = true;
@@ -422,13 +380,12 @@ void Browser::initialize(int width, int height)
         pthread_threadid_np(nullptr, &g_Once.tid);
     }
 
-    // Create offscreen window
-    m_private->window = gtk_offscreen_window_new();
-    gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
-    
     // Create WebKitWebContext explicitly
     // This is to avoid webkit_web_context_get_default() which uses an undestroyable GOnce
     m_private->webContext = webkit_web_context_new();
+
+    // Faux single process mode for global context
+    webkit_web_context_set_process_model(m_private->webContext, WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS);
 
     // Settings
     m_private->settings = webkit_settings_new();
@@ -442,24 +399,34 @@ void Browser::initialize(int width, int height)
     webkit_settings_set_javascript_can_access_clipboard(m_private->settings, TRUE);
     webkit_settings_set_enable_write_console_messages_to_stdout(m_private->settings, TRUE);
 
-    // Faux single process mode for global context
-    webkit_web_context_set_process_model(m_private->webContext, WEBKIT_PROCESS_MODEL_SHARED_SECONDARY_PROCESS);
-
     // Create WebKitUserContentManager
     m_private->userContentManager = webkit_user_content_manager_new();
 
+    m_private->initialized = true;
+}
+
+bool Browser::isInitialized() const {
+    return m_private->initialized;
+}
+
+Browser::Tab::Tab(const uint width, const uint height, const BrowserPrivate* parent)
+: m_private(new TabPrivate(parent)) {
+    // Create offscreen window
+    m_private->window = gtk_offscreen_window_new();
+    gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
+    
     // Create WebKitWebView with default global context (GtkWidget)
     // Based on webkit_web_view_new_with_user_content_manager and webkit_web_view_new_with_context
     m_private->webView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
         "is-ephemeral", false,
-        "web-context", m_private->webContext,
-        "user-content-manager", m_private->userContentManager,
+        "web-context", m_private->parent->webContext,
+        "user-content-manager", m_private->parent->userContentManager,
         nullptr));
-    g_assert(webkit_web_view_get_user_content_manager(m_private->webView) == m_private->userContentManager);
-    webkit_web_view_set_settings(m_private->webView, m_private->settings);
+    g_assert(webkit_web_view_get_user_content_manager(m_private->webView) == m_private->parent->userContentManager);
+    webkit_web_view_set_settings(m_private->webView, m_private->parent->settings);
     
     // Callbacks
-    g_signal_connect(m_private->webView, "ready-to-show", G_CALLBACK(webViewReadyToShow), this);
+    //g_signal_connect(m_private->webView, "ready-to-show", G_CALLBACK(webViewReadyToShow), this);
     g_signal_connect(m_private->webView, "notify::is-loading", G_CALLBACK(webViewIsLoadingChanged), m_private.get());
     g_signal_connect(m_private->webView, "load-failed", G_CALLBACK(webViewLoadFailed), m_private.get());
     
@@ -471,11 +438,11 @@ void Browser::initialize(int width, int height)
     using namespace std::placeholders;
     webkit_web_view_set_paint_callback(m_private->webView, [=](uint8_t *data, float scaling, const GdkPoint &dstPoint, const GdkRectangle &srcSize, const GdkRectangle &srcRect)->void {
         // Callback
-        if(m_private->paintCallback) {
+        if(m_private->callbackPaint) {
             const Point dstPoint_ = { (unsigned int)dstPoint.x, (unsigned int)dstPoint.y };
             const Rect srcSize_ = { (unsigned int)srcSize.x, (unsigned int)srcSize.y, (unsigned int)srcSize.width, (unsigned int)srcSize.height };
             const Rect srcRect_ = { (unsigned int)srcRect.x, (unsigned int)srcRect.y, (unsigned int)srcRect.width, (unsigned int)srcRect.height };
-            m_private->paintCallback(data, dstPoint_ ,srcSize_, srcRect_);
+            m_private->callbackPaint(data, dstPoint_ ,srcSize_, srcRect_);
         }
     });
     
@@ -490,15 +457,26 @@ void Browser::initialize(int width, int height)
     // Call focus-in event once to enable keyboard focus (and carets and such)
     doFocusInEvent(GTK_WIDGET(m_private->webView));
     
-    /// DENISE BEGIN
-    registerWebExtension(this);
-    /// DENISE END
+    // Register Denise web extension
+    registerWebExtension(m_private.get());
 
     m_private->initialized = true;
 }
 
-void Browser::tick()
-{
+Browser::Tab::~Tab() {
+    if (m_private->webView) {
+        gtk_widget_destroy(GTK_WIDGET(m_private->webView));
+        m_private->webView = nullptr;
+    }
+    if (m_private->window) {
+        gtk_widget_destroy(m_private->window);
+        m_private->window = nullptr;
+    }
+    m_private->initialized = false;
+}
+
+#if 0
+void Browser::tick() {
     // Thread safety check (caller thread must be identical for all GTK calls)
     uint64_t tid;
     pthread_threadid_np(nullptr, &tid);
@@ -507,14 +485,9 @@ void Browser::tick()
     // ACHTUNG check if necessary
     gtk_main_iteration_do(FALSE);
 }
+#endif
 
-bool Browser::isInitialized() const
-{
-    return m_private->initialized;
-}
-
-void Browser::setSize(int width, int height)
-{
+void Browser::Tab::setSize(int width, int height) {
     printf("Browser::setSize(%u, %u)\n", width, height);
     assert(isInitialized());
     
@@ -527,13 +500,11 @@ void Browser::setSize(int width, int height)
     gtk_widget_size_allocate(GTK_WIDGET(m_private->webView), &alloc);
 }
 
-void Browser::mouseMove(int x, int y, ModifierKeys modifier)
-{
+void Browser::Tab::mouseMove(int x, int y, ModifierKeys modifier) {
     doMotionEvent(GTK_WIDGET(m_private->webView), x, y, modifierToGdkState(modifier));
 }
 
-void Browser::mouseDown(int x, int y, ModifierKeys modifier)
-{
+void Browser::Tab::mouseDown(int x, int y, ModifierKeys modifier) {
     doMouseEvent(
         GDK_BUTTON_PRESS,
         GTK_WIDGET(m_private->webView),
@@ -544,8 +515,7 @@ void Browser::mouseDown(int x, int y, ModifierKeys modifier)
     );
 }
 
-void Browser::mouseUp(int x, int y, ModifierKeys modifier)
-{
+void Browser::Tab::mouseUp(int x, int y, ModifierKeys modifier) {
     doMouseEvent(
         GDK_BUTTON_RELEASE,
         GTK_WIDGET(m_private->webView),
@@ -556,8 +526,7 @@ void Browser::mouseUp(int x, int y, ModifierKeys modifier)
     );
 }
 
-void Browser::keyPress(const unsigned int key, const ModifierKeys modifierKeys)
-{
+void Browser::Tab::keyPress(const unsigned int key, const ModifierKeys modifierKeys) {
     // Immediate press + release
     doKeyStrokeEvent(
         GDK_KEY_PRESS,
@@ -568,34 +537,32 @@ void Browser::keyPress(const unsigned int key, const ModifierKeys modifierKeys)
     );
 }
 
-void Browser::loadURL(const std::string &url)
-{
+void Browser::Tab::loadURL(const std::string &url) {
     webkit_web_view_load_uri(m_private->webView, url.c_str());
 }
 
-void Browser::setPaintCallback(PaintCallback fn)
-{
-    m_private->paintCallback = fn;
+void Browser::Tab::setCallbackPaint(CallbackPaint fn) {
+    m_private->callbackPaint = fn;
 }
 
-void Browser::setIsLoadingCallback(IsLoadingCallback fn)
-{
-    m_private->isLoadingCallback = fn;
+void Browser::Tab::setCallbackIsLoading(CallbackIsLoading fn) {
+    m_private->callbackIsLoading = fn;
 }
 
-void Browser::setLoadFailedCallback(LoadFailedCallback fn)
-{
-    m_private->loadFailedCallback = fn;
+void Browser::Tab::setCallbackLoadFailed(CallbackLoadFailed fn) {
+    m_private->callbackLoadFailed = fn;
 }
 
-// ACHTUNG: Static hack to get the Denise::Internal interfaces to Extension.cpp,
-// as there is currently no easy way to get to the Browser instance in which these interfaces are stored as member vars.
-#include "Extension.h"
-Denise::Internal::Wrapper* g_deniseInterfaceWrapper;
-    
-void Browser::deniseSetWrapperInterface(Denise::Internal::Wrapper* interface)
-{
-    m_private->m_deniseInterfaceWrapper = g_deniseInterfaceWrapper = interface;
+void Browser::Tab::setCallbackDeniseLoadProduct(CallbackDeniseLoadProduct fn) {
+    m_private->callbackDeniseLoadProduct = fn;
+}
+
+void Browser::Tab::setCallbackDeniseSetOverlay(CallbackDeniseSetOverlay fn) {
+    m_private->callbackDeniseSetOverlay = fn;
+}
+
+void Browser::Tab::setCallbackDeniseSetHeader(CallbackDeniseSetHeader fn) {
+    m_private->callbackDeniseSetHeader = fn;
 }
 
 }

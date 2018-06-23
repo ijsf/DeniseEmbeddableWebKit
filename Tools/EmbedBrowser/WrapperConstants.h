@@ -4,8 +4,8 @@
 
 #pragma once
 
-enum PluginType {
-    PLUGIN_VST = 0,
-    PLUGIN_VST3 = 1,
-    PLUGIN_AU = 2
+enum ProductType {
+    PRODUCT_PLUGIN_VST = 0,
+    PRODUCT_PLUGIN_VST3 = 1,
+    PRODUCT_PLUGIN_AU = 2
 };

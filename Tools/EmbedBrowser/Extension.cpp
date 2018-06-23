@@ -1,7 +1,8 @@
+#include "Private.h"
+#include "Extension.h"
+
 #include <webkit2/webkit-web-extension.h>
 #include <JavaScriptCore/JavaScript.h>
-
-#include "Extension.h"
 
 #define UNUSED_PARAM(variable) (void)variable
 
@@ -70,12 +71,18 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
     
+    TabPrivate* tab = (TabPrivate*)JSObjectGetPrivate(object);
+    assert(tab != nullptr);
+
     /* DeniseWrapper.loadProduct(payload: ProductPayload, callback: function(err: ErrorCode)) */
     if (argumentCount == 2) {
         // Get parameters
         JSObjectRef objPayload = JSValueToObject(context, arguments[0], exception);
         if (!*exception) {
-            Denise::Internal::Wrapper::ProductPayload productPayload;
+            Denise::Wrapper::ProductType productType;
+            std::string productId;
+            std::string productLoadData;
+            
             bool valid = true;
             // productPayload.id
             if (valid) {
@@ -84,7 +91,7 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
                 if (!*exception && JSValueIsString(context, jsValueRef)) {
                     JSStringRef jsstrValue = JSValueToStringCopy(context, jsValueRef, exception);
                     if (!*exception && jsstrValue) {
-                        productPayload.id = JSStringToStdString(jsstrValue);
+                        productId = JSStringToStdString(jsstrValue);
                     }
                     else {
                         valid = false;
@@ -108,7 +115,7 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
                 if (!*exception && JSValueIsNumber(context, jsValueRef)) {
                     int value = JSValueToNumber(context, jsValueRef, exception);
                     if (!*exception) {
-                        productPayload.type = (Denise::Internal::Wrapper::PluginType)value;
+                        productType = (Denise::Wrapper::ProductType)value;
                     }
                     else {
                         valid = false;
@@ -131,7 +138,7 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
                 if (!*exception && JSValueIsString(context, jsValueRef)) {
                     JSStringRef jsstrValue = JSValueToStringCopy(context, jsValueRef, exception);
                     if (!*exception && jsstrValue) {
-                        productPayload.loadData = JSStringToStdString(jsstrValue);
+                        productLoadData = JSStringToStdString(jsstrValue);
                     }
                     else {
                         valid = false;
@@ -149,8 +156,8 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
                 JSStringRelease(jsstrKey);
             }
             // Callback if parameters were valid
-            if (valid && g_deniseInterfaceWrapper) {
-                g_deniseInterfaceWrapper->loadProduct(productPayload);
+            if (valid && tab->callbackDeniseLoadProduct) {
+                tab->callbackDeniseLoadProduct(productType, productId, productLoadData);
             }
         }
     }
@@ -167,6 +174,9 @@ JSValueRef deniseJSLoadProduct(JSContextRef context, JSObjectRef object, JSObjec
 JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
+
+    TabPrivate* tab = (TabPrivate*)JSObjectGetPrivate(object);
+    assert(tab != nullptr);
 
     // Error related parameters
     JSObjectRef objCallback;
@@ -196,8 +206,8 @@ JSValueRef deniseJSSetOverlay(JSContextRef context, JSObjectRef object, JSObject
                 {
                     JSStringRef jsstrVisible = JSStringCreateWithUTF8CString("visible");
                     const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, jsstrVisible, exception));
-                    if(!*exception && g_deniseInterfaceWrapper) {
-                        g_deniseInterfaceWrapper->setOverlay(visible);
+                    if(!*exception && tab->callbackDeniseSetOverlay) {
+                        tab->callbackDeniseSetOverlay(visible);
                     }
                     JSStringRelease(jsstrVisible);
                 }
@@ -230,6 +240,9 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
     UNUSED_PARAM(object);
     UNUSED_PARAM(thisObject);
 
+    TabPrivate* tab = (TabPrivate*)JSObjectGetPrivate(object);
+    assert(tab != nullptr);
+
     // Error related parameters
     JSObjectRef objCallback;
     
@@ -258,8 +271,8 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
                 {
                     JSStringRef jsstrVisible = JSStringCreateWithUTF8CString("visible");
                     const bool visible = JSValueToBoolean(context, JSObjectGetProperty(context, objParams, jsstrVisible, exception));
-                    if(!*exception && g_deniseInterfaceWrapper) {
-                        g_deniseInterfaceWrapper->setHeader(visible);
+                    if(!*exception && tab->callbackDeniseSetHeader) {
+                        tab->callbackDeniseSetHeader(visible);
                     }
                     JSStringRelease(jsstrVisible);
                 }
@@ -288,11 +301,11 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
 }
 
 // THREAD-BROWSER
-void deniseBindJS(JSGlobalContextRef context) {
+void deniseBindJS(JSGlobalContextRef context, TabPrivate* tab) {
     JSObjectRef objGlobal = JSContextGetGlobalObject(context);
     if (objGlobal) {
         // Create DeniseWrapper object as default JS Object
-        JSObjectRef objDeniseWrapper = JSObjectMake(context, nullptr, nullptr);
+        JSObjectRef objDeniseWrapper = JSObjectMake(context, nullptr, tab);
         // Create function DeniseWrapper.loadProduct
         {
             JSStringRef str = JSStringCreateWithUTF8CString("loadProduct");
@@ -325,15 +338,15 @@ void deniseBindJS(JSGlobalContextRef context) {
 }
 
 // THREAD-BROWSER
-void webViewWindowObjectCleared(WebKitScriptWorld *world, WebKitWebPage *page, WebKitFrame *frame, Browser *browser) {
-    deniseBindJS(webkit_frame_get_javascript_context_for_script_world(frame, world));
+void webViewWindowObjectCleared(WebKitScriptWorld *world, WebKitWebPage* page, WebKitFrame* frame, TabPrivate* tab) {
+    deniseBindJS(webkit_frame_get_javascript_context_for_script_world(frame, world), tab);
 }
 
 // THREAD-UI
-extern void registerWebExtension(Browser* browser) {
-    webkit_script_world_set_create_callback([browser](WebKitScriptWorld* world)->void {
+extern void registerWebExtension(TabPrivate* tab) {
+    webkit_script_world_set_create_callback([tab](WebKitScriptWorld* world)->void {
         // THREAD-BROWSER
-        g_signal_connect(world, "window-object-cleared", G_CALLBACK(webViewWindowObjectCleared), browser);
+        g_signal_connect(world, "window-object-cleared", G_CALLBACK(webViewWindowObjectCleared), tab);
     });
 }
 
