@@ -514,55 +514,71 @@ void Browser::tick() {
 void Browser::Tab::setSize(const unsigned int width, const unsigned int height) {
     printf("Browser::setSize(%u, %u)\n", width, height);
     assert(isInitialized());
-    
-    // Size the window, though this appears to be in vain
-    //gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
-    //gtk_window_resize(GTK_WINDOW(m_private->window), width, height);
+    if (isInitialized()) {
+        // Size the window, though this appears to be in vain
+        //gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
+        //gtk_window_resize(GTK_WINDOW(m_private->window), width, height);
 
-    // Performing a size_allocate on the webView widget seems to trigger the right callback(s)
-    GtkAllocation alloc = { 0, 0, (int)width, (int)height };
-    gtk_widget_size_allocate(GTK_WIDGET(m_private->webView), &alloc);
+        // Performing a size_allocate on the webView widget seems to trigger the right callback(s)
+        GtkAllocation alloc = { 0, 0, (int)width, (int)height };
+        gtk_widget_size_allocate(GTK_WIDGET(m_private->webView), &alloc);
+    }
 }
 
 void Browser::Tab::mouseMove(int x, int y, ModifierKeys modifier) {
-    doMotionEvent(GTK_WIDGET(m_private->webView), x, y, modifierToGdkState(modifier));
+    assert(isInitialized());
+    if (isInitialized()) {
+        doMotionEvent(GTK_WIDGET(m_private->webView), x, y, modifierToGdkState(modifier));
+    }
 }
 
 void Browser::Tab::mouseDown(int x, int y, ModifierKeys modifier) {
-    doMouseEvent(
-        GDK_BUTTON_PRESS,
-        GTK_WIDGET(m_private->webView),
-        x,
-        y,
-        modifierToGdkButton(modifier),
-        modifierToGdkState(modifier)
-    );
+    assert(isInitialized());
+    if (isInitialized()) {
+        doMouseEvent(
+            GDK_BUTTON_PRESS,
+            GTK_WIDGET(m_private->webView),
+            x,
+            y,
+            modifierToGdkButton(modifier),
+            modifierToGdkState(modifier)
+        );
+    }
 }
 
 void Browser::Tab::mouseUp(int x, int y, ModifierKeys modifier) {
-    doMouseEvent(
-        GDK_BUTTON_RELEASE,
-        GTK_WIDGET(m_private->webView),
-        x,
-        y,
-        modifierToGdkButton(modifier),
-        modifierToGdkState(modifier)
-    );
+    assert(isInitialized());
+    if (isInitialized()) {
+        doMouseEvent(
+            GDK_BUTTON_RELEASE,
+            GTK_WIDGET(m_private->webView),
+            x,
+            y,
+            modifierToGdkButton(modifier),
+            modifierToGdkState(modifier)
+        );
+    }
 }
 
 void Browser::Tab::keyPress(const unsigned int key, const ModifierKeys modifierKeys) {
-    // Immediate press + release
-    doKeyStrokeEvent(
-        GDK_KEY_PRESS,
-        GTK_WIDGET(m_private->webView),
-        keyToGdkKey(key),
-        modifierToGdkState(modifierKeys),
-        true
-    );
+    assert(isInitialized());
+    if (isInitialized()) {
+        // Immediate press + release
+        doKeyStrokeEvent(
+            GDK_KEY_PRESS,
+            GTK_WIDGET(m_private->webView),
+            keyToGdkKey(key),
+            modifierToGdkState(modifierKeys),
+            true
+        );
+    }
 }
 
 void Browser::Tab::loadURL(const std::string &url) {
-    webkit_web_view_load_uri(m_private->webView, url.c_str());
+    assert(isInitialized());
+    if (isInitialized()) {
+        webkit_web_view_load_uri(m_private->webView, url.c_str());
+    }
 }
 
 void Browser::Tab::setCallbackPaint(CallbackPaint fn) {
