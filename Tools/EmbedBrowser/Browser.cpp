@@ -409,8 +409,15 @@ bool Browser::isInitialized() const {
     return m_private->initialized;
 }
 
-Browser::Tab::Tab(const uint width, const uint height, const BrowserPrivate* parent)
+std::shared_ptr<Browser::Tab> Browser::createTab() {
+    return std::shared_ptr<Browser::Tab>(new Browser::Tab(m_private.get()));
+}
+
+Browser::Tab::Tab(BrowserPrivate* parent)
 : m_private(new TabPrivate(parent)) {
+}
+
+void Browser::Tab::initialize(const unsigned int width, const unsigned int height) {
     // Create offscreen window
     m_private->window = gtk_offscreen_window_new();
     gtk_window_set_default_size(GTK_WINDOW(m_private->window), width, height);
@@ -487,7 +494,7 @@ void Browser::tick() {
 }
 #endif
 
-void Browser::Tab::setSize(int width, int height) {
+void Browser::Tab::setSize(const unsigned int width, const unsigned int height) {
     printf("Browser::setSize(%u, %u)\n", width, height);
     assert(isInitialized());
     
@@ -496,7 +503,7 @@ void Browser::Tab::setSize(int width, int height) {
     //gtk_window_resize(GTK_WINDOW(m_private->window), width, height);
 
     // Performing a size_allocate on the webView widget seems to trigger the right callback(s)
-    GtkAllocation alloc = { 0, 0, width, height };
+    GtkAllocation alloc = { 0, 0, (int)width, (int)height };
     gtk_widget_size_allocate(GTK_WIDGET(m_private->webView), &alloc);
 }
 

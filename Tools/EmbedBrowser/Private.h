@@ -22,7 +22,7 @@ namespace WebKitEmbed
 class TabPrivate
 {
 public:
-    TabPrivate(const class BrowserPrivate* parent_) : initialized(false), parent(parent_) {};
+    TabPrivate(class BrowserPrivate* parent_) : initialized(false), parent(parent_) {};
     ~TabPrivate() = default;
 
     Browser::Tab::CallbackPaint callbackPaint;
@@ -37,7 +37,7 @@ public:
     WebKitWebView* webView;
     GtkWidget* window;
     
-    const class BrowserPrivate* parent;
+    class BrowserPrivate* parent;
 };
 class BrowserPrivate
 {

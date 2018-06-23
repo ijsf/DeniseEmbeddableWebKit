@@ -42,22 +42,19 @@ namespace WebKitEmbed
             unsigned int height;
         };
 
-        Browser();
-        virtual ~Browser();
-
-        void initialize();
-        bool isInitialized() const;
-
-    public:
         /**
-         * Tab
-         */
+        * Tab
+        */
         class Tab {
+        protected:
+            friend class Browser;
+            Tab(class BrowserPrivate* parent);
+   
         public:
-            Tab(const unsigned int width, const unsigned int height, const class BrowserPrivate* parent);
             ~Tab();
-            
-            void setSize(int width, int height);
+
+            void initialize(const unsigned int width, const unsigned int height);
+            void setSize(const unsigned int width, const unsigned int height);
 
             void mouseMove(int x, int y, ModifierKeys modifier);
             void mouseDown(int x, int y, ModifierKeys modifier);
@@ -65,8 +62,8 @@ namespace WebKitEmbed
 
             void keyPress(const unsigned int key, const ModifierKeys modifierKeys);
 
-            void loadURL(const std::string &url);
-            
+            void loadURL(const std::string& url);
+
             /*** Browser callbacks ***/
             typedef std::function<void(uint8_t *, const Point&, const Rect&, const Rect&)> CallbackPaint;
             typedef std::function<void(const bool)> CallbackIsLoading;
@@ -77,7 +74,7 @@ namespace WebKitEmbed
             void setCallbackPaint(CallbackPaint fn);
             void setCallbackIsLoading(CallbackIsLoading fn);
             void setCallbackLoadFailed(CallbackLoadFailed fn);
-            
+
             /*** Denise callbacks ***/
             typedef std::function<void(const Denise::Wrapper::ProductType, const std::string, const std::string)> CallbackDeniseLoadProduct;
             typedef std::function<void(const bool)> CallbackDeniseSetOverlay;
@@ -88,9 +85,17 @@ namespace WebKitEmbed
             void setCallbackDeniseSetHeader(CallbackDeniseSetHeader fn);
         private:
             // pImpl
-            std::unique_ptr<class TabPrivate> m_private;
+            std::shared_ptr<class TabPrivate> m_private;
         };
-    
+
+    public:
+        Browser();
+        virtual ~Browser();
+
+        void initialize();
+        bool isInitialized() const;
+        std::shared_ptr<Tab> createTab();
+
     private:
         // pImpl
         std::unique_ptr<class BrowserPrivate> m_private;
