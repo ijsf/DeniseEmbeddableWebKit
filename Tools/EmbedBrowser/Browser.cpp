@@ -495,6 +495,10 @@ void Browser::Tab::initialize(const unsigned int width, const unsigned int heigh
     m_private->initialized = true;
 }
 
+bool Browser::Tab::isInitialized() const {
+    return m_private->initialized;
+}
+
 #if 0
 void Browser::tick() {
     // Thread safety check (caller thread must be identical for all GTK calls)

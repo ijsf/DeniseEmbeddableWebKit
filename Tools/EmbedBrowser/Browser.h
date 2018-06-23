@@ -57,6 +57,8 @@ namespace WebKitEmbed
             ~Tab();
 
             void initialize(const unsigned int width, const unsigned int height);
+            bool isInitialized() const;
+
             void setSize(const unsigned int width, const unsigned int height);
 
             void mouseMove(int x, int y, ModifierKeys modifier);
