@@ -262,6 +262,15 @@ Save and close, and make sure to rebuild the package:
 
 	brew reinstall --build-from-source gtk+3
 
+### Fixups
+
+The CMake files of the `WebCore` target are currently a bit messed up and do not properly include the `gio-unix` and `gettext` module include paths. As a workaround, copy the relevant header files into the `glib` include path:
+
+```
+cp /usr/local/include/gio-unix-2.0/gio/* /usr/local/include/glib-2.0/gio/
+cp /usr/local/opt/gettext/include/* /usr/local/include/glib-2.0/
+```
+
 ## Building
 
 Make sure to add `gettext` to `PATH` before calling cmake:
