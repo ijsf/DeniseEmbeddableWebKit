@@ -349,7 +349,7 @@ void Browser::initialize() {
     if (!g_Once.initialized) {
         g_Once.initialized = true;
 
-        gtk_init(nullptr, nullptr);   // THREADCHECK
+        gtk_init_check(nullptr, nullptr);
 
         //
         // Forcibly disable glib's runtime giomodule loading, because we don't want ANYTHING system-based to be loaded by glib
