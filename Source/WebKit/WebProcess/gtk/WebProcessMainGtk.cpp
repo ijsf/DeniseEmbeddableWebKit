@@ -57,8 +57,10 @@ public:
 #endif
         gtk_init(nullptr, nullptr);
 
+#if USE(GLIB) && defined(GETTEXT_PACKAGE)
         bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
         bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
+#endif
 
         return true;
     }

@@ -171,7 +171,9 @@ struct _WebKitWebViewBasePrivate {
     AttachmentSide inspectorAttachmentSide { AttachmentSide::Bottom };
     unsigned inspectorViewSize { 0 };
     GUniquePtr<GdkEvent> contextMenuEvent;
+#if ENABLE(CONTEXT_MENUS)
     WebContextMenuProxyGtk* activeContextMenuProxy { nullptr };
+#endif
     InputMethodFilter inputMethodFilter;
     KeyBindingTranslator keyBindingTranslator;
     TouchEventsMap touchEvents;
@@ -812,7 +814,9 @@ static gboolean webkitWebViewBasePopupMenu(GtkWidget* widget)
     if (!currentEvent)
         currentEvent = gdk_event_new(GDK_NOTHING);
     priv->contextMenuEvent.reset(currentEvent);
+#if ENABLE(CONTEXT_MENUS)
     priv->pageProxy->handleContextMenuKeyEvent();
+#endif
 
     return TRUE;
 }
@@ -1356,6 +1360,7 @@ void webkitWebViewBaseSetInspectorViewSize(WebKitWebViewBase* webkitWebViewBase,
         gtk_widget_queue_resize_no_redraw(GTK_WIDGET(webkitWebViewBase));
 }
 
+#if ENABLE(CONTEXT_MENUS)
 static void activeContextMenuUnmapped(GtkMenu* menu, WebKitWebViewBase* webViewBase)
 {
     if (webViewBase->priv->activeContextMenuProxy && webViewBase->priv->activeContextMenuProxy->gtkMenu() == menu)
@@ -1377,6 +1382,7 @@ GdkEvent* webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase* webkitWebView
 {
     return webkitWebViewBase->priv->contextMenuEvent.release();
 }
+#endif
 
 void webkitWebViewBaseSetFocus(WebKitWebViewBase* webViewBase, bool focused)
 {

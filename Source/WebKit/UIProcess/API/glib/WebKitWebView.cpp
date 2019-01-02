@@ -649,7 +649,9 @@ static void webkitWebViewConstructed(GObject* object)
     attachLoaderClientToView(webView);
     attachUIClientToView(webView);
     attachPolicyClientToView(webView);
+#if ENABLE(CONTEXT_MENUS)
     attachContextMenuClientToView(webView);
+#endif
     attachFormClientToView(webView);
 
 #if PLATFORM(GTK)
@@ -1610,6 +1612,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
         G_TYPE_BOOLEAN, 1, /* number of parameters */
         WEBKIT_TYPE_FILE_CHOOSER_REQUEST);
 
+#if ENABLE(CONTEXT_MENUS)
     /**
      * WebKitWebView::context-menu:
      * @web_view: the #WebKitWebView on which the signal is emitted
@@ -1685,6 +1688,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
         G_TYPE_POINTER, // FIXME: use a wpe thing here. I'm not sure we want to expose libwpe in the API.
 #endif
         WEBKIT_TYPE_HIT_TEST_RESULT);
+#endif
 
     /**
      * WebKitWebView::context-menu-dismissed:
@@ -2234,6 +2238,7 @@ void webkitWebViewRunFileChooserRequest(WebKitWebView* webView, WebKitFileChoose
     g_signal_emit(webView, signals[RUN_FILE_CHOOSER], 0, request, &returnValue);
 }
 
+#if ENABLE(CONTEXT_MENUS)
 #if PLATFORM(GTK)
 static void contextMenuDismissed(GtkMenuShell*, WebKitWebView* webView)
 {
@@ -2276,6 +2281,7 @@ void webkitWebViewPopulateContextMenu(WebKitWebView* webView, const Vector<WebCo
     gboolean returnValue;
     g_signal_emit(webView, signals[CONTEXT_MENU], 0, contextMenu.get(), nullptr, hitTestResult.get(), &returnValue);
 }
+#endif
 #endif
 
 void webkitWebViewSubmitFormRequest(WebKitWebView* webView, WebKitFormSubmissionRequest* request)

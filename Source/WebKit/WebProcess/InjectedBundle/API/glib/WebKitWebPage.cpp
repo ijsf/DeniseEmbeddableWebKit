@@ -66,8 +66,10 @@ using namespace WebCore;
 enum {
     DOCUMENT_LOADED,
     SEND_REQUEST,
+#if ENABLE(CONTEXT_MENUS)
 #if PLATFORM(GTK)
     CONTEXT_MENU,
+#endif
 #endif
     CONSOLE_MESSAGE_SENT,
 #if PLATFORM(GTK)
@@ -322,6 +324,7 @@ private:
     WebKitWebPage* m_webPage;
 };
 
+#if ENABLE(CONTEXT_MENUS)
 class PageContextMenuClient final : public API::InjectedBundle::PageContextMenuClient {
 public:
     explicit PageContextMenuClient(WebKitWebPage* webPage)
@@ -355,6 +358,7 @@ private:
 
     WebKitWebPage* m_webPage;
 };
+#endif
 
 class PageUIClient final : public API::InjectedBundle::PageUIClient {
 public:
@@ -479,6 +483,7 @@ static void webkit_web_page_class_init(WebKitWebPageClass* klass)
         WEBKIT_TYPE_URI_REQUEST,
         WEBKIT_TYPE_URI_RESPONSE);
 
+#if ENABLE(CONTEXT_MENUS)
 #if PLATFORM(GTK)
     /**
      * WebKitWebPage::context-menu:
@@ -509,6 +514,7 @@ static void webkit_web_page_class_init(WebKitWebPageClass* klass)
         G_TYPE_BOOLEAN, 2,
         WEBKIT_TYPE_CONTEXT_MENU,
         WEBKIT_TYPE_WEB_HIT_TEST_RESULT);
+#endif
 #endif
 
     /**
@@ -574,7 +580,9 @@ WebKitWebPage* webkitWebPageCreate(WebPage* webPage)
 
     webPage->setInjectedBundleResourceLoadClient(std::make_unique<PageResourceLoadClient>(page));
     webPage->setInjectedBundlePageLoaderClient(std::make_unique<PageLoaderClient>(page));
+#if ENABLE(CONTEXT_MENUS)
     webPage->setInjectedBundleContextMenuClient(std::make_unique<PageContextMenuClient>(page));
+#endif
     webPage->setInjectedBundleUIClient(std::make_unique<PageUIClient>(page));
 #if PLATFORM(GTK)
     webPage->setInjectedBundleFormClient(std::make_unique<PageFormClient>(page));

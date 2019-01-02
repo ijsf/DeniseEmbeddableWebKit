@@ -353,7 +353,7 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #endif
 
 #if !defined(ENABLE_CONTEXT_MENUS)
-#define ENABLE_CONTEXT_MENUS 1
+#define ENABLE_CONTEXT_MENUS 0
 #endif
 
 #if !defined(ENABLE_CSS3_TEXT)

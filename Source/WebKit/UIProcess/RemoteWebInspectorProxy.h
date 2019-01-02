@@ -32,6 +32,8 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
+#if ENABLE(REMOTE_INSPECTOR)
+
 #if PLATFORM(MAC)
 OBJC_CLASS NSURL;
 OBJC_CLASS NSWindow;
@@ -123,3 +125,5 @@ private:
 };
 
 } // namespace WebKit
+
+#endif

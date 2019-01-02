@@ -22,7 +22,11 @@
 #include "WebContextMenuItemGlib.h"
 #include "WebKitContextMenuActions.h"
 
+#if ENABLE(CONTEXT_MENUS)
+
 bool webkitContextMenuActionIsCheckable(WebKitContextMenuAction);
 WebCore::ContextMenuAction webkitContextMenuActionGetActionTag(WebKitContextMenuAction);
 WebKitContextMenuAction webkitContextMenuActionGetForContextMenuItem(const WebKit::WebContextMenuItemGlib&);
 String webkitContextMenuActionGetLabel(WebKitContextMenuAction);
+
+#endif

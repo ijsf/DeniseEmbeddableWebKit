@@ -20,6 +20,8 @@
 #include "config.h"
 #include "WebKitContextMenuItem.h"
 
+#if ENABLE(CONTEXT_MENUS)
+
 #include "APIArray.h"
 #include "WebContextMenuItem.h"
 #include "WebContextMenuItemGlib.h"
@@ -366,3 +368,4 @@ WebKitContextMenu* webkit_context_menu_item_get_submenu(WebKitContextMenuItem* i
     return item->priv->subMenu.get();
 }
 
+#endif

@@ -20,6 +20,8 @@
 #include "config.h"
 #include "WebKitContextMenu.h"
 
+#if ENABLE(CONTEXT_MENUS)
+
 #include "APIArray.h"
 #include "WebContextMenuItem.h"
 #include "WebKitContextMenuItemPrivate.h"
@@ -364,3 +366,5 @@ GVariant* webkit_context_menu_get_user_data(WebKitContextMenu* menu)
 
     return menu->priv->userData.get();
 }
+
+#endif

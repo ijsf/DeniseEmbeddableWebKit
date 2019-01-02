@@ -26,6 +26,8 @@
 #include "config.h"
 #include "WebContextMenuItemGlib.h"
 
+#if ENABLE(CONTEXT_MENUS)
+
 #include "APIObject.h"
 #include <gio/gio.h>
 
@@ -221,3 +223,6 @@ void WebContextMenuItemGlib::createActionIfNeeded()
 }
 
 } // namespace WebKit
+
+#endif
+

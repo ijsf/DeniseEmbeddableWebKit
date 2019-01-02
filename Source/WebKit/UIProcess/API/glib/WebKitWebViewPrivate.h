@@ -76,7 +76,9 @@ void webKitWebViewDidReceiveSnapshot(WebKitWebView*, uint64_t callbackID, WebKit
 void webkitWebViewRemoveLoadingWebResource(WebKitWebView*, uint64_t resourceIdentifier);
 void webkitWebViewEnterFullScreen(WebKitWebView*);
 void webkitWebViewExitFullScreen(WebKitWebView*);
+#if ENABLE(CONTEXT_MENUS)
 void webkitWebViewPopulateContextMenu(WebKitWebView*, const Vector<WebKit::WebContextMenuItemData>& proposedMenu, const WebKit::WebHitTestResultData&, GVariant*);
+#endif
 void webkitWebViewSubmitFormRequest(WebKitWebView*, WebKitFormSubmissionRequest*);
 void webkitWebViewHandleAuthenticationChallenge(WebKitWebView*, WebKit::AuthenticationChallengeProxy*);
 void webkitWebViewInsecureContentDetected(WebKitWebView*, WebKitInsecureContentEvent);

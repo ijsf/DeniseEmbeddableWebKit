@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(CONTEXT_MENUS)
+
 #include "WebContextMenuItemData.h"
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -69,3 +71,5 @@ private:
 };
 
 } // namespace WebKit
+
+#endif

@@ -49,9 +49,6 @@ void webkitWebViewBaseEnterFullScreen(WebKitWebViewBase*);
 void webkitWebViewBaseExitFullScreen(WebKitWebViewBase*);
 bool webkitWebViewBaseIsFullScreen(WebKitWebViewBase*);
 void webkitWebViewBaseSetInspectorViewSize(WebKitWebViewBase*, unsigned size);
-void webkitWebViewBaseSetActiveContextMenuProxy(WebKitWebViewBase*, WebKit::WebContextMenuProxyGtk*);
-WebKit::WebContextMenuProxyGtk* webkitWebViewBaseGetActiveContextMenuProxy(WebKitWebViewBase*);
-GdkEvent* webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase*);
 void webkitWebViewBaseSetInputMethodState(WebKitWebViewBase*, bool enabled);
 void webkitWebViewBaseUpdateTextInputState(WebKitWebViewBase*);
 void webkitWebViewBaseSetContentsSize(WebKitWebViewBase*, const WebCore::IntSize&);
@@ -71,6 +68,12 @@ void webkitWebViewBaseUpdateAcceleratedCompositingMode(WebKitWebViewBase*, const
 void webkitWebViewBaseExitAcceleratedCompositingMode(WebKitWebViewBase*);
 void webkitWebViewBaseDidRelaunchWebProcess(WebKitWebViewBase*);
 void webkitWebViewBasePageClosed(WebKitWebViewBase*);
+
+#if ENABLE(CONTEXT_MENUS)
+void webkitWebViewBaseSetActiveContextMenuProxy(WebKitWebViewBase*, WebKit::WebContextMenuProxyGtk*);
+WebKit::WebContextMenuProxyGtk* webkitWebViewBaseGetActiveContextMenuProxy(WebKitWebViewBase*);
+GdkEvent* webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase*);
+#endif
 
 #if ENABLE(DRAG_SUPPORT)
 WebKit::DragAndDropHandler& webkitWebViewBaseDragAndDropHandler(WebKitWebViewBase*);

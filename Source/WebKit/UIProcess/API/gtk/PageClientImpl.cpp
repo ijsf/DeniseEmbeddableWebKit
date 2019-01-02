@@ -211,10 +211,12 @@ RefPtr<WebPopupMenuProxy> PageClientImpl::createPopupMenuProxy(WebPageProxy& pag
     return WebPopupMenuProxyGtk::create(m_viewWidget, page);
 }
 
+#if ENABLE(CONTEXT_MENUS)
 RefPtr<WebContextMenuProxy> PageClientImpl::createContextMenuProxy(WebPageProxy& page, const ContextMenuContextData& context, const UserData& userData)
 {
     return WebContextMenuProxyGtk::create(m_viewWidget, page, context, userData);
 }
+#endif
 
 RefPtr<WebColorPicker> PageClientImpl::createColorPicker(WebPageProxy* page, const WebCore::Color& color, const WebCore::IntRect& rect)
 {

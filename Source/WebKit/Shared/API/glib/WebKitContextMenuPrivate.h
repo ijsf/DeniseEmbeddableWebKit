@@ -22,8 +22,12 @@
 #include "WebContextMenuItemGlib.h"
 #include "WebKitContextMenu.h"
 
+#if ENABLE(CONTEXT_MENUS)
+
 WebKitContextMenu* webkitContextMenuCreate(const Vector<WebKit::WebContextMenuItemData>&);
 void webkitContextMenuPopulate(WebKitContextMenu*, Vector<WebKit::WebContextMenuItemGlib>&);
 void webkitContextMenuPopulate(WebKitContextMenu*, Vector<WebKit::WebContextMenuItemData>&);
 void webkitContextMenuSetParentItem(WebKitContextMenu*, WebKitContextMenuItem*);
 WebKitContextMenuItem* webkitContextMenuGetParentItem(WebKitContextMenu*);
+
+#endif

@@ -20,6 +20,8 @@
 #include "config.h"
 #include "WebKitContextMenuActions.h"
 
+#if ENABLE(CONTEXT_MENUS)
+
 #include "WebKitContextMenuActionsPrivate.h"
 #include <WebCore/LocalizedStrings.h>
 
@@ -340,3 +342,5 @@ String webkitContextMenuActionGetLabel(WebKitContextMenuAction action)
 
     return String();
 }
+
+#endif

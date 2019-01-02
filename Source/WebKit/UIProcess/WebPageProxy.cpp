@@ -4602,6 +4602,7 @@ void WebPageProxy::hidePopupMenu()
 }
 
 #if ENABLE(CONTEXT_MENUS)
+#error 1
 void WebPageProxy::showContextMenu(const ContextMenuContextData& contextMenuContextData, const UserData& userData)
 {
     // Showing a context menu runs a nested runloop, which can handle messages that cause |this| to get closed.
