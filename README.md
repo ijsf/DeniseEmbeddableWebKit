@@ -81,52 +81,13 @@ Since gtk+3 is installed globally through Homebrew, we have to patch the Homebre
 
 	HOMEBREW_EDITOR=nano brew edit gtk+3
 
-In the editor, add the following patch on the first level:
+The patches below assume the following version:
 
 ```
-	patch :p1, <<~EOS
-	  From 2c474afd063ae0ce3e0bb7fea452480042bb2b64 Mon Sep 17 00:00:00 2001
-	  From: Philip Chimento <philip.chimento@gmail.com>
-	  Date: Sun, 21 May 2017 20:40:40 -0700
-	  Subject: [PATCH] quartz: Fix crash when realizing GtkOffscreenWindow
-
-	  GtkOffscreenWindow doesn't have a NSView or NSWindow, so return NULL if
-	  passed one of those.
-
-	  https://bugzilla.gnome.org/show_bug.cgi?id=667721
-	  ---
-	   gtk/gtkdnd-quartz.c | 6 +++++-
-	   1 file changed, 5 insertions(+), 1 deletion(-)
-
-	  diff --git a/gtk/gtkdnd-quartz.c b/gtk/gtkdnd-quartz.c
-	  index 6198986f6d..e047f06abf 100644
-	  --- a/gtk/gtkdnd-quartz.c
-	  +++ b/gtk/gtkdnd-quartz.c
-	  @@ -36,6 +36,7 @@
-	   #include "gtkimageprivate.h"
-	   #include "gtkinvisible.h"
-	   #include "gtkmain.h"
-	  +#include "gtkoffscreenwindow.h"
-	   #include "deprecated/gtkstock.h"
-	   #include "gtkwindow.h"
-	   #include "gtkintl.h"
-	  @@ -356,7 +357,10 @@ get_toplevel_nswindow (GtkWidget *widget)
-	   {
-	     GtkWidget *toplevel = gtk_widget_get_toplevel (widget);
-	     GdkWindow *window = gtk_widget_get_window (toplevel);
-	  -  
-	  +
-	  +  if (GTK_IS_OFFSCREEN_WINDOW (toplevel))
-	  +    return NULL;
-	  +
-	     if (gtk_widget_is_toplevel (toplevel) && window)
-	       return [gdk_quartz_window_get_nsview (window) window];
-	     else
-	  -- 
-	EOS
+    url "https://download.gnome.org/sources/gtk+/3.24/gtk+-3.24.2.tar.xz"
 ```
 
-Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/gtk/issues/784`):
+Add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/gtk/issues/784`):
 
 ```
     patch :p0, <<~EOS
@@ -197,7 +158,7 @@ Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/
     EOS
 ```
 
-Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/gtk/issues/986`):
+Add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/gtk/issues/986`):
 
 ```
     patch :p1, <<~EOS
@@ -234,7 +195,7 @@ Also add the following bugfix patch (tracked at `https://gitlab.gnome.org/GNOME/
     EOS
 ```
 
-Also add the following hack patch:
+Add the following hack patch:
 
 ```
     patch :p1, <<~EOS
@@ -251,6 +212,27 @@ Also add the following hack patch:
  
              autorelease_pool = [[NSAutoreleasePool alloc] init];
            }
+    EOS
+```
+
+Add the following patch to disable the Dock icon:
+
+```
+    patch :p0, <<~EOS
+      --- gdk/quartz/gdkdisplay-quartz.c	2019-01-04 01:45:55.000000000 +0100
+      +++ gdk/quartz/gdkdisplay-quartz.c	2019-01-04 01:46:11.000000000 +0100
+      @@ -473,11 +473,4 @@
+                         G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+                         0, NULL, NULL, NULL,
+                         G_TYPE_NONE, 0, NULL);
+      -
+      -  ProcessSerialNumber psn = { 0, kCurrentProcess };
+      -
+      -  /* Make the current process a foreground application, i.e. an app
+      -   * with a user interface, in case we're not running from a .app bundle
+      -   */
+      -  TransformProcessType (&psn, kProcessTransformToForegroundApplication);
+       }
     EOS
 ```
 
