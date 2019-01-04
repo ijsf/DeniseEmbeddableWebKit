@@ -26,6 +26,8 @@
 #include "config.h"
 #include "RemoteWebInspectorUI.h"
 
+#if ENABLE(REMOTE_INSPECTOR)
+
 #include "RemoteWebInspectorProxyMessages.h"
 #include "RemoteWebInspectorUIMessages.h"
 #include "WebPage.h"
@@ -148,3 +150,6 @@ void RemoteWebInspectorUI::inspectedURLChanged(const String& urlString)
 }
 
 } // namespace WebKit
+
+#endif
+

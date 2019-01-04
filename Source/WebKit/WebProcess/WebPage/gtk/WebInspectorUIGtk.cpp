@@ -44,9 +44,11 @@ String WebInspectorUI::localizedStringsURL()
     return String("resource:///org/webkitgtk/inspector/Localizations/en.lproj/localizedStrings.js");
 }
 
+#if ENABLE(REMOTE_INSPECTOR)
 String RemoteWebInspectorUI::localizedStringsURL()
 {
     return String("resource:///org/webkitgtk/inspector/Localizations/en.lproj/localizedStrings.js");
 }
+#endif
 
 } // namespace WebKit

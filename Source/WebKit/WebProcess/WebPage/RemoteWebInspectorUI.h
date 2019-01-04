@@ -25,6 +25,8 @@
 
 #pragma once
 
+#if ENABLE(REMOTE_INSPECTOR)
+
 #include "MessageReceiver.h"
 #include "WebInspectorFrontendAPIDispatcher.h"
 #include <WebCore/InspectorFrontendClient.h>
@@ -87,3 +89,6 @@ private:
 };
 
 } // namespace WebKit
+
+#endif
+
