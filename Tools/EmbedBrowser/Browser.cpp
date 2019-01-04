@@ -302,14 +302,17 @@ static void doKeyStrokeEvent(GdkEventType type, GtkWidget* widget, guint keyVal,
     event->key.time = GDK_CURRENT_TIME;
     event->key.window = gtk_widget_get_window(widget);
     g_object_ref(event->key.window);
-    gdk_event_set_device(event, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(widget))));
+    //gdk_event_set_device(event, gdk_device_manager_get_client_pointer(gdk_display_get_device_manager(gtk_widget_get_display(widget))));
     event->key.state = state;
 
     // When synthesizing an event, an invalid hardware_keycode value can cause it to be badly processed by GTK+.
     GdkKeymapKey* keys;
     int keysCount;
-    if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyVal, &keys, &keysCount) && keysCount)
+    if (keyVal != 0 && gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyVal, &keys, &keysCount) && keysCount) {
         event->key.hardware_keycode = keys[0].keycode;
+        event->key.group = keys[0].group;
+        g_free(keys);
+    }
 
     gtk_main_do_event(event);
     if (doReleaseAfterPress) {
