@@ -32,7 +32,9 @@ public:
     Browser::Tab::CallbackDeniseLoadProduct callbackDeniseLoadProduct;
     Browser::Tab::CallbackDeniseSetOverlay callbackDeniseSetOverlay;
     Browser::Tab::CallbackDeniseSetHeader callbackDeniseSetHeader;
-    
+	Browser::Tab::CallbackDeniseAppNotificationSet callbackDeniseAppNotificationSet;
+	Browser::Tab::CallbackDeniseAppNotificationReset callbackDeniseAppNotificationReset;
+	    
     bool initialized;
     WebKitWebView* webView;
     GtkWidget* window;

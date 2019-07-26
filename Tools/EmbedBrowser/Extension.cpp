@@ -314,35 +314,92 @@ JSValueRef deniseJSSetHeader(JSContextRef context, JSObjectRef object, JSObjectR
 }
 
 // THREAD-BROWSER
+JSValueRef deniseAppJSNotificationSet(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
+    UNUSED_PARAM(object);
+    UNUSED_PARAM(thisObject);
+
+    std::shared_ptr<TabPrivate> tab = getTabFromObject(object);
+
+    /* DeniseApp.notificationSet() */
+    tab->callbackDeniseAppNotificationSet();
+    
+    return JSValueMakeUndefined(context);
+}
+
+// THREAD-BROWSER
+JSValueRef deniseAppJSNotificationReset(JSContextRef context, JSObjectRef object, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception) {
+    UNUSED_PARAM(object);
+    UNUSED_PARAM(thisObject);
+
+    std::shared_ptr<TabPrivate> tab = getTabFromObject(object);
+
+    /* DeniseApp.notificationReset() */
+    tab->callbackDeniseAppNotificationReset();
+    
+    return JSValueMakeUndefined(context);
+}
+
+// THREAD-BROWSER
 void deniseBindJS(JSGlobalContextRef context, const Browser::Tab::Index tabIndex) {
     JSObjectRef objGlobal = JSContextGetGlobalObject(context);
     if (objGlobal) {
-        // Create DeniseWrapper object as default JS Object
-        // (tabIndex encoded into pointer, which should be fine)
-        JSObjectRef objDeniseWrapper = JSObjectMake(context, nullptr, (void*)tabIndex);
-        // Create function DeniseWrapper.loadProduct
+        // DeniseWrapper
         {
-            JSStringRef str = JSStringCreateWithUTF8CString("loadProduct");
-            JSObjectSetProperty(context, objDeniseWrapper, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSLoadProduct), kJSPropertyAttributeNone, nullptr);
-            JSStringRelease(str);
+            // Create object as default JS Object
+            // (tabIndex encoded into pointer, which should be fine)
+            JSObjectRef obj = JSObjectMake(context, nullptr, (void*)tabIndex);
+            
+            // DeniseWrapper.loadProduct
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("loadProduct");
+                JSObjectSetProperty(context, obj, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSLoadProduct), kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
+            // DeniseWrapper.setOverlay
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("setOverlay");
+                JSObjectSetProperty(context, obj, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSSetOverlay), kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
+            // DeniseWrapper.setHeader
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("setHeader");
+                JSObjectSetProperty(context, obj, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSSetHeader), kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
+
+            // Bind to new object in global object
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("DeniseWrapper");
+                JSObjectSetProperty(context, objGlobal, str, obj, kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
         }
-        // Create function DeniseWrapper.setOverlay
+        // DeniseApp
         {
-            JSStringRef str = JSStringCreateWithUTF8CString("setOverlay");
-            JSObjectSetProperty(context, objDeniseWrapper, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSSetOverlay), kJSPropertyAttributeNone, nullptr);
-            JSStringRelease(str);
-        }
-        // Create function DeniseWrapper.setHeader
-        {
-            JSStringRef str = JSStringCreateWithUTF8CString("setHeader");
-            JSObjectSetProperty(context, objDeniseWrapper, str, JSObjectMakeFunctionWithCallback(context, str, deniseJSSetHeader), kJSPropertyAttributeNone, nullptr);
-            JSStringRelease(str);
-        }
-        // Bind to 'DeniseWrapper' in global object
-        {
-            JSStringRef str = JSStringCreateWithUTF8CString("DeniseWrapper");
-            JSObjectSetProperty(context, objGlobal, str, objDeniseWrapper, kJSPropertyAttributeNone, nullptr);
-            JSStringRelease(str);
+            // Create object as default JS Object
+            // (tabIndex encoded into pointer, which should be fine)
+            JSObjectRef obj = JSObjectMake(context, nullptr, (void*)tabIndex);
+            
+            // DeniseApp.notificationSet()
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("notificationSet");
+                JSObjectSetProperty(context, obj, str, JSObjectMakeFunctionWithCallback(context, str, deniseAppJSNotificationSet), kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
+            // DeniseApp.notificationReset()
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("notificationReset");
+                JSObjectSetProperty(context, obj, str, JSObjectMakeFunctionWithCallback(context, str, deniseAppJSNotificationReset), kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
+
+            // Bind to new object in global object
+            {
+                JSStringRef str = JSStringCreateWithUTF8CString("DeniseApp");
+                JSObjectSetProperty(context, objGlobal, str, obj, kJSPropertyAttributeNone, nullptr);
+                JSStringRelease(str);
+            }
         }
     }
     else {

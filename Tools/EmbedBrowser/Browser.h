@@ -84,10 +84,14 @@ namespace WebKitEmbed
             typedef std::function<void(const Denise::Wrapper::ProductType, const std::string, const std::string)> CallbackDeniseLoadProduct;
             typedef std::function<void(const bool)> CallbackDeniseSetOverlay;
             typedef std::function<void(const bool)> CallbackDeniseSetHeader;
+            typedef std::function<void(void)> CallbackDeniseAppNotificationSet;
+            typedef std::function<void(void)> CallbackDeniseAppNotificationReset;
 
             void setCallbackDeniseLoadProduct(CallbackDeniseLoadProduct fn);
             void setCallbackDeniseSetOverlay(CallbackDeniseSetOverlay fn);
             void setCallbackDeniseSetHeader(CallbackDeniseSetHeader fn);
+            void setCallbackDeniseAppNotificationSet(CallbackDeniseAppNotificationSet fn);
+            void setCallbackDeniseAppNotificationReset(CallbackDeniseAppNotificationReset fn);
 
             // pImpl
             std::shared_ptr<class TabPrivate> m_private;

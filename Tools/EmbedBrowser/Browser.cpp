@@ -608,4 +608,12 @@ void Browser::Tab::setCallbackDeniseSetHeader(CallbackDeniseSetHeader fn) {
     m_private->callbackDeniseSetHeader = fn;
 }
 
+void Browser::Tab::setCallbackDeniseAppNotificationSet(CallbackDeniseAppNotificationSet fn) {
+    m_private->callbackDeniseAppNotificationSet = fn;
+}
+
+void Browser::Tab::setCallbackDeniseAppNotificationReset(CallbackDeniseAppNotificationReset fn) {
+    m_private->callbackDeniseAppNotificationReset = fn;
+}
+
 }
