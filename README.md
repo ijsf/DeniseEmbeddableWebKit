@@ -13,7 +13,50 @@ Currently, only OS X is supported.
 
 Building WebKitGtk on OS X requires a number of prerequisities and some bug patches to dependencies that may have been installed globally or other oddities.
 
-## Prerequisities
+## Prerequisities to run
+
+### Pitfalls
+
+The following errors may occur when running the daemon on a vanilla system:
+
+```
+Fontconfig error: Cannot load default config file
+com.denise.daemon start
+XPCService::XPCService
+Initializing browser
+
+(<unknown>:194): GdkPixbuf-WARNING **: 15:54:37.180: Cannot open pixbuf loader module file '/usr/local/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache': No such file or directory
+
+This likely means that your installation is broken.
+Try running the command
+gdk-pixbuf-query-loaders > /usr/local/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache
+to make things work again for the time being.
+```
+
+To fix this, unfortunately a number of things need to be installed on the system, see below.
+
+### Font-config
+
+The bundled GTK relies on font-config being present on the system.
+
+```
+brew install font-config
+fc-cache
+```
+
+### GTK+3
+
+The bundled GTK relies on some GSettings files / schemes being present in the system.
+
+```
+brew install gtk+3
+```
+
+### Self-signed certificates
+
+These do not work. The daemon will crash (and restart) with a `g_object_unref` error.
+
+## Prerequisities to compile
 
 ### XCode
 
@@ -243,6 +286,16 @@ Add the following configure arguments for static linking and to disable unnecess
 Save and close, and make sure to rebuild the package:
 
 	brew reinstall --build-from-source gtk+3
+
+### gdk-pixbuf
+
+This library compiles with dynamic loader modules by default. These should be built-in instead.
+
+    HOMEBREW_EDITOR=nano brew edit gtk+3
+
+Add this flag to the build configuration options:
+
+    -Dbuiltin_loaders=all
 
 ### Fixups
 
