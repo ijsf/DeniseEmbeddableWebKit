@@ -1,4 +1,4 @@
-# EmbeddableWebKitGtk (formerly DeniseEmbeddableWebKit)
+# Embeddable WebKit
 
 This is a now unmaintained repository representing a whole lot of work creating an embeddable (as library) WebKit browser based on WebKitGTK.
 
