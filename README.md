@@ -23,13 +23,10 @@ Building WebKitGtk on OS X requires a number of prerequisities and some bug patc
 
 ### Pitfalls
 
-The following errors may occur when running the daemon on a vanilla system:
+The following errors may occur when running an application using the embedded browser on a vanilla macOS system:
 
 ```
 Fontconfig error: Cannot load default config file
-com.denise.daemon start
-XPCService::XPCService
-Initializing browser
 
 (<unknown>:194): GdkPixbuf-WARNING **: 15:54:37.180: Cannot open pixbuf loader module file '/usr/local/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache': No such file or directory
 
