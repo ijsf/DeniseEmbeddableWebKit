@@ -1,4 +1,10 @@
-# WebKitGtk for Denise
+# EmbeddableWebKitGtk (formerly DeniseEmbeddableWebKit)
+
+This is a now unmaintained repository representing a whole lot of work creating an embeddable (as library) WebKit browser based on WebKitGTK.
+
+Since the prototype this code was originally meant for is no longer necessary, this repository is now available as open source in case anyone finds a use for it. A lot of work has been done patching WebKitGTK as can be seen in the commits.
+
+---
 
 This repository aims to provide a port of the WebKitGtk project that can be used to embed a lightweight version of WebKit into other applications with the following characteristics:
 
